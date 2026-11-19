@@ -1,0 +1,15 @@
+{
+  "name": "rami",
+  "version": "1.0.0",
+  "description": "Moroccan Rami for two players: live turns, house rules, stats.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/rules.test.js && node test/store.test.js"
+  },
+  "engines": { "node": ">=20.12" },
+  "dependencies": {
+    "mongodb": "^6.10.0"
+  }
+}

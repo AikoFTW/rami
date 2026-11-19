@@ -1,0 +1,195 @@
+/*
+VOICE   warm, homey, a game night at the kitchen table
+IDEA    a felt card table with a zellige-tiled border
+PICTURE the table itself: deck, discard pile, both hands
+COLOUR  deep felt green, saffron accent, terracotta reds, sand paper
+TYPE    Reem Kufi for titles, Rubik for everything else
+*/
+:root {
+  color-scheme: light dark;
+  --felt: #0d4f43;
+  --felt-2: color-mix(in srgb, var(--felt) 78%, black);
+  --saffron: #e8b23a;
+  --terra: #c2482b;
+  --bg: light-dark(#f4ece0, #14110e);
+  --panel: light-dark(#fffaf2, #201b16);
+  --ink: light-dark(#231c15, #f1e7d8);
+  --muted: light-dark(#6f6255, #b3a593);
+  --line: light-dark(#e3d6c3, #3a3129);
+  --card-w: 64px;
+  --radius: 12px;
+}
+:root[data-theme=light] { color-scheme: light }
+:root[data-theme=dark] { color-scheme: dark }
+* { box-sizing: border-box; min-width: 0 }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 Rubik, system-ui, sans-serif; overflow-x: clip; }
+button { font: inherit; color: inherit; cursor: pointer }
+h1, h2, h3 { font-family: 'Reem Kufi', Rubik, sans-serif; line-height: 1.1; margin: 0 }
+.boot { padding: 40px; text-align: center; color: var(--muted) }
+
+/* ---------- top bar ---------- */
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px max(4vw, 14px);
+  background: var(--felt-2); color: #f6efe2; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: 'Reem Kufi'; font-size: 26px; font-weight: 700; color: var(--saffron); text-decoration: none }
+.brand svg { width: 32px; height: 32px }
+nav { display: flex; gap: 4px; flex-wrap: wrap; margin-inline-start: auto }
+nav a { color: #f6efe2; text-decoration: none; padding: 10px 14px; border-radius: 999px; font-weight: 500 }
+nav a[aria-current=page] { background: rgba(255,255,255,.14) }
+nav a:focus-visible, .btn:focus-visible, .card:focus-visible { outline: 3px solid var(--saffron); outline-offset: 2px }
+.who { font-size: 14px; opacity: .85 }
+.who button { background: none; border: 0; text-decoration: underline; padding: 8px }
+
+main { max-width: 1240px; margin: 0 auto; padding: 20px max(4vw, 14px) 60px }
+
+/* ---------- buttons ---------- */
+.btn { min-height: 44px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); font-weight: 600 }
+.btn.primary { background: var(--saffron); border-color: var(--saffron); color: #2a1d05 }
+.btn.danger { color: var(--terra) }
+.btn:disabled { opacity: .45; cursor: not-allowed }
+.btn.big { font-size: 18px; padding: 14px 28px }
+
+/* ---------- scoreboard ---------- */
+.score { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 14px; margin-bottom: 16px }
+.score .p { display: flex; align-items: center; gap: 10px; font-weight: 600 }
+.score .p.right { justify-content: flex-end; text-align: end }
+.score .num { font-family: 'Reem Kufi'; font-size: 34px; color: var(--felt); line-height: 1 }
+:root[data-theme=dark] .score .num, .dark-auto .score .num { color: var(--saffron) }
+.score .vs { color: var(--muted); font-size: 14px }
+.turn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--saffron); box-shadow: 0 0 0 4px color-mix(in srgb, var(--saffron) 30%, transparent) }
+
+/* ---------- the table ---------- */
+.table { position: relative; border-radius: 22px; padding: clamp(14px, 3vw, 28px); color: #f6efe2;
+  background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--felt) 85%, white), var(--felt) 55%, var(--felt-2));
+  box-shadow: inset 0 0 0 6px color-mix(in srgb, var(--felt-2) 60%, black), inset 0 0 0 9px var(--saffron), 0 18px 40px -20px rgba(0,0,0,.6) }
+.table::before { content: ''; position: absolute; inset: 9px; border-radius: 15px; pointer-events: none; opacity: .09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M24 4l5 9 10-2-2 10 9 5-9 5 2 10-10-2-5 9-5-9-10 2 2-10-9-5 9-5-2-10 10 2z' fill='none' stroke='white' stroke-width='1.4'/%3E%3C/svg%3E") }
+.row { position: relative; display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
+.opp { justify-content: space-between; min-height: 92px }
+.opp-name { font-weight: 600; display: flex; align-items: center; gap: 8px }
+.backs { display: flex; padding-inline-start: 24px }
+.backs .card { margin-inline-start: -30px; width: 46px; height: 66px }
+.center { justify-content: center; gap: clamp(18px, 5vw, 56px); margin: 22px 0 }
+.pile { display: grid; justify-items: center; gap: 6px; background: none; border: 0; padding: 6px; border-radius: 14px; color: inherit }
+.pile.can { cursor: pointer }
+.pile.can .card { box-shadow: 0 0 0 3px var(--saffron), 0 8px 18px rgba(0,0,0,.35) }
+.pile.can:hover .card { transform: translateY(-4px) }
+.pile small { font-size: 13px; opacity: .85 }
+.empty-slot { width: var(--card-w); height: calc(var(--card-w) * 1.42); border: 2px dashed rgba(255,255,255,.35); border-radius: 9px }
+.status { text-align: center; font-size: 17px; font-weight: 500; min-height: 52px; max-width: 46ch; margin: 0 auto }
+.status .sub { display: block; font-size: 14px; opacity: .8; font-weight: 400 }
+
+/* ---------- cards ---------- */
+.card { position: relative; flex: none; width: var(--card-w); height: calc(var(--card-w) * 1.42); border-radius: 9px; border: 0;
+  background: #fffdf8; color: #1d1d1d; box-shadow: 0 1px 0 rgba(0,0,0,.25), 0 6px 14px -6px rgba(0,0,0,.45);
+  padding: 0; font-family: Rubik, sans-serif; transition: transform .15s ease, box-shadow .15s ease; user-select: none; -webkit-user-select: none }
+.card .tl { position: absolute; left: 6px; top: 4px; display: grid; justify-items: center; line-height: 1; font-weight: 600; font-size: calc(var(--card-w) * .27) }
+.card .tl i { font-style: normal; font-size: .85em }
+.card .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--card-w) * .55); padding-top: 14% }
+.card .pip.face { font-family: 'Reem Kufi'; font-size: calc(var(--card-w) * .5) }
+.card.s-H, .card.s-D { color: var(--terra) }
+.four .card.s-D { color: #1f5fbf } .four .card.s-C { color: #1d7a3e }
+.card.joker { background: linear-gradient(160deg, #fff6df, #fde3a7); color: #6b3a0a }
+.card.joker .pip { font-size: calc(var(--card-w) * .5) }
+.card.joker .tl { font-size: calc(var(--card-w) * .16); letter-spacing: .02em; writing-mode: vertical-rl }
+.card.back { background: var(--terra); background-image:
+  repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 4px, transparent 4px 10px),
+  repeating-linear-gradient(-45deg, rgba(255,255,255,.14) 0 4px, transparent 4px 10px);
+  box-shadow: inset 0 0 0 3px #fffdf8, 0 6px 14px -6px rgba(0,0,0,.5) }
+.card.mini { --card-w: 34px }
+
+.hand-wrap { margin-top: 10px; background: rgba(0,0,0,.16); border-radius: 16px; padding: 14px 10px 10px }
+.hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: calc(var(--card-w) * 1.42 + 14px); padding-top: 12px }
+.hand .card { cursor: pointer }
+.hand .card.sel { transform: translateY(-12px); box-shadow: 0 0 0 3px var(--saffron), 0 12px 22px -8px rgba(0,0,0,.6) }
+.hand .card.new::after { content: 'new'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600;
+  background: var(--saffron); color: #2a1d05; padding: 1px 6px; border-radius: 999px }
+.hand .card.drag-over { box-shadow: -5px 0 0 0 var(--saffron), 0 6px 14px -6px rgba(0,0,0,.45) }
+.hand .card.dragging { opacity: .4 }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px }
+.actions .btn { background: rgba(255,255,255,.1); color: #f6efe2; border-color: rgba(255,255,255,.25) }
+.actions .btn.primary { background: var(--saffron); color: #2a1d05; border-color: var(--saffron) }
+.hint { text-align: center; font-size: 13px; opacity: .75; margin: 8px 0 0 }
+
+/* ---------- game over ---------- */
+.result { margin-top: 18px; background: var(--panel); color: var(--ink); border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px -18px rgba(0,0,0,.6) }
+.result h2 { font-size: clamp(26px, 4vw, 40px); margin-bottom: 6px }
+.melds { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 }
+.meld { display: flex; gap: 3px; padding: 8px; border-radius: 12px; background: color-mix(in srgb, var(--felt) 12%, transparent); flex-wrap: wrap }
+.meld-label { width: 100%; font-size: 12px; color: var(--muted); font-weight: 600 }
+
+/* ---------- side log ---------- */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start }
+.log { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; font-size: 14px; max-height: 520px; overflow-y: auto }
+.log h3 { font-size: 18px; margin-bottom: 8px }
+.log ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px }
+.log li { color: var(--muted) } .log li b { color: var(--ink); font-weight: 600 }
+.log .s-H, .log .s-D { color: var(--terra) }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0,1fr) } .log { max-height: 260px } }
+
+/* ---------- panels: stats, history, settings ---------- */
+.page-title { font-size: clamp(30px, 4vw, 44px); margin: 6px 0 18px }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px }
+.panel h2 { font-size: 22px; margin-bottom: 12px }
+.big-num { font-family: 'Reem Kufi'; font-size: 52px; line-height: 1; color: var(--felt) }
+:root[data-theme=dark] .big-num { color: var(--saffron) }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; margin-top: 12px }
+.kv dt { color: var(--muted) } .kv dd { margin: 0; font-weight: 600; text-align: right; white-space: nowrap }
+.bar { display: flex; height: 18px; border-radius: 999px; overflow: hidden; background: var(--line); margin: 14px 0 6px }
+.bar span { display: block; height: 100% } .bar .a { background: var(--felt) } .bar .b { background: var(--saffron) }
+.bar-legend { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted) }
+
+table.hist { width: 100%; border-collapse: collapse; font-size: 15px }
+.hist th, .hist td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top }
+.hist th { font-size: 13px; color: var(--muted); font-weight: 500 }
+.hist td.n { text-align: right; white-space: nowrap }
+.hist .hand-mini { display: flex; flex-wrap: wrap; gap: 2px }
+.badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--line); font-weight: 600 }
+.badge.rami { background: var(--saffron); color: #2a1d05 }
+
+form.settings { display: grid; gap: 14px }
+.field { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line) }
+.field:last-of-type { border-bottom: 0 }
+.field label { font-weight: 500 } .field small { display: block; color: var(--muted); font-weight: 400; font-size: 13px }
+select, input[type=number], input[type=text], input[type=password] { font: inherit; font-size: 16px; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink) }
+input[type=checkbox] { width: 24px; height: 24px; accent-color: var(--felt) }
+input[type=color] { width: 54px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: none; padding: 3px }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
+.swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line) }
+.swatch[aria-pressed=true] { border-color: var(--ink) }
+.sw-0 { background: #0d4f43 } .sw-1 { background: #134a6b } .sw-2 { background: #6b1f2a } .sw-3 { background: #3b2a55 } .sw-4 { background: #2f3a2a } .sw-5 { background: #5a3a1c }
+
+/* ---------- login ---------- */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--felt) 80%, white), var(--felt) 50%, var(--felt-2)) }
+.login form { width: min(380px, 100%); background: var(--panel); border-radius: 20px; padding: 28px; display: grid; gap: 14px;
+  box-shadow: 0 0 0 4px var(--saffron), 0 30px 60px -30px rgba(0,0,0,.7) }
+.login h1 { font-size: 44px; color: var(--felt); text-align: center }
+:root[data-theme=dark] .login h1 { color: var(--saffron) }
+.login .fan { display: flex; justify-content: center; margin-bottom: 4px }
+.login .fan .card { margin: 0 -10px } .login .fan .card:nth-child(1) { transform: rotate(-14deg) translateY(6px) }
+.login .fan .card:nth-child(3) { transform: rotate(14deg) translateY(6px) }
+.login label { display: grid; gap: 4px; font-weight: 500 }
+.err { color: var(--terra); font-size: 14px; min-height: 20px; margin: 0 }
+
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 40px); opacity: 0; background: #231c15; color: #f6efe2;
+  padding: 12px 18px; border-radius: 12px; max-width: min(92vw, 480px); transition: .2s; pointer-events: none; z-index: 10 }
+#toast.show { transform: translate(-50%, 0); opacity: 1 }
+
+.card-s { --card-w: 52px } .card-l { --card-w: 78px }
+@media (max-width: 600px) {
+  :root { --card-w: 48px } .card-s { --card-w: 40px } .card-l { --card-w: 56px }
+  .hand { gap: 3px } .backs .card { width: 34px; height: 48px; margin-inline-start: -24px }
+  .score .num { font-size: 26px } nav a { padding: 8px 10px }
+}
+@media (prefers-reduced-motion: reduce) { .card, #toast { transition: none } }
+.scroll { overflow-x: auto }
+.opp .badge { background: rgba(255,255,255,.18); color: #fff }
+@media (max-width: 600px) {
+  .center { gap: 10px 28px; margin: 14px 0 }
+  .center .status { order: 3; flex-basis: 100%; min-height: 0 }
+}
+.center-text { text-align: center; margin: 0 }
+.login .hint { color: var(--muted); opacity: 1 }
