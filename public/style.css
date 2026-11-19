@@ -446,39 +446,10 @@ select.lang { color: #f6efe2 }
 }
 
 
-/* ---------- Zlayji mode: Moroccan red and green, zellige everywhere ---------- */
-/* Overrides live on <body> only, so turning it off brings back your own saved look untouched. */
-body.zlayji { --felt: #9b1c22; --felt-2: #5e0f14; --saffron: #e8b23a; --zl-green: #006233; --zl-red: #c1272d }
-body.zlayji .top { background: var(--zl-green); box-shadow: inset 0 -4px 0 var(--zl-red) }
-body.zlayji .tabs { background: transparent }
-@media (max-width: 720px) { body.zlayji .tabs { background: var(--zl-green); box-shadow: 0 -4px 0 var(--zl-red), 0 -6px 20px rgba(0,0,0,.25) } }
-body.zlayji .table { background: radial-gradient(ellipse at 50% 40%, #c4262e, #9b1c22 55%, #5e0f14);
   box-shadow: inset 0 0 0 6px var(--zl-green), inset 0 0 0 9px var(--saffron), inset 0 0 0 14px var(--zl-green), 0 18px 40px -20px rgba(0,0,0,.6) }
-body.zlayji .table::before { inset: 14px; opacity: .55; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50.0 10.0 L74.7 86.0 L10.1 39.0 L89.9 39.0 L25.3 86.0 Z' fill='none' stroke='%230a7a42' stroke-width='3.4' stroke-linejoin='round'/%3E%3C/svg%3E") center 38% / min(70%, 420px) no-repeat }
-body.zlayji .table::after { content: ''; position: absolute; left: 14px; right: 14px; top: 14px; height: 10px; border-radius: 6px 6px 0 0; opacity: .9;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23c1272d'/%3E%3Cpath d='M8 1 L10 6 L15 8 L10 10 L8 15 L6 10 L1 8 L6 6 Z' fill='%23006233' stroke='%23e8b23a' stroke-width='.5'/%3E%3C/svg%3E") 0 0 / 10px 10px repeat-x; pointer-events: none }
-body.zlayji .card.back, body.zlayji .card.flipping::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23006233'/%3E%3Cg fill='%23f6efe2' stroke='%23e8b23a' stroke-width='.6'%3E%3Crect x='6.5' y='6.5' width='11' height='11'/%3E%3Crect x='6.5' y='6.5' width='11' height='11' transform='rotate%2845 12 12%29'/%3E%3C/g%3E%3Crect x='9.6' y='9.6' width='4.8' height='4.8' transform='rotate%2845 12 12%29' fill='%23c1272d'/%3E%3Cg fill='%23c1272d'%3E%3Ccircle cx='0' cy='0' r='2.2'/%3E%3Ccircle cx='24' cy='0' r='2.2'/%3E%3Ccircle cx='0' cy='24' r='2.2'/%3E%3Ccircle cx='24' cy='24' r='2.2'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 14px 14px;
   box-shadow: inset 0 0 0 3px var(--saffron), inset 0 0 0 5px #fffdf8, 0 6px 14px -6px rgba(0,0,0,.5) }
-body.zlayji .card { background: linear-gradient(#fffdf8, #fbf3e4) }
-body.zlayji .card.joker { background: linear-gradient(160deg, #e9fff2, #b9e8cb); color: var(--zl-green) }
-body.zlayji .card.joker .pip { color: var(--zl-red) }
-body.zlayji .card .as { background: var(--zl-green); color: #fff }
-body.zlayji .score .num { color: var(--zl-red) }
-body.zlayji .score .p.right .num { color: var(--zl-green) }
-body.zlayji .group.meld-swivi { background: rgba(0,98,51,.35); box-shadow: inset 0 0 0 2px #2fb36d }
-body.zlayji .group.meld-swivi .group-label { color: #8ff0bb }
-body.zlayji .group.loose { background: rgba(0,0,0,.18) }
-body.zlayji .potential.is-good { border-color: #2fb36d }
-body.zlayji .big-num { color: var(--zl-red) }
-body.zlayji .login { background: radial-gradient(ellipse at 50% 30%, #c4262e, #9b1c22 50%, #5e0f14) }
-.zl-btn { display: grid; place-items: center; width: 42px; height: 34px; padding: 4px; border-radius: 9px; border: 1px solid rgba(255,255,255,.3);
   background: rgba(255,255,255,.08); opacity: .75; transition: transform .2s cubic-bezier(.34,1.56,.64,1), opacity .2s, background-color .2s; text-decoration: none !important }
-.zl-btn svg { width: 30px; height: 20px; display: block; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.3) }
-.zl-btn[aria-pressed=true] { opacity: 1; background: rgba(255,255,255,.22); border-color: var(--saffron) }
-.zl-btn:active { transform: scale(.9) }
-.spark.zl-red { color: #c1272d } .spark.zl-green { color: #0a8a4a }
-body.zlayji .table { padding-top: calc(clamp(14px, 3vw, 28px) + 14px) }
-body.zlayji .table::before { opacity: .38 }
 
 /* ---------- settings layout ---------- */
 .stack-col { display: grid; gap: 16px; align-content: start }
@@ -498,12 +469,86 @@ input.switch::after { content: ''; position: absolute; top: 3px; left: 3px; widt
 input.switch:checked { background: var(--felt) }
 input.switch:checked::after { transform: translateX(22px) }
 :root[dir=rtl] .switch:checked::after { transform: translateX(-22px) } :root[dir=rtl] .switch::after { left: auto; right: 3px }
-.secret { display: flex; justify-content: center; margin-top: 22px }
+.secret { display: flex; justify-content: center }
 .secret-star { background: none; border: 0; color: var(--muted); opacity: .25; font-size: 18px; width: 44px; height: 44px; border-radius: 50%;
   transition: opacity .3s, transform .3s cubic-bezier(.34,1.56,.64,1), color .3s }
 .secret-star:hover { opacity: .6; color: #0a7a42; transform: rotate(36deg) scale(1.15) }
-.zl-panel { width: min(100%, 560px); animation: rise .35s var(--ease) both; border-color: #0a7a42; box-shadow: inset 0 3px 0 #c1272d }
+
+
+/* ================= Zlayji mode =================
+   Moroccan red and green with zellige everywhere. Every rule hangs off body.zlayji,
+   so switching it off brings back the player's own saved look untouched. */
+body.zlayji { --felt: #9b1c22; --felt-2: #5e0f14; --zl-green: #006233; --zl-green-2: #0a7a42; --zl-red: #c1272d; --zl-gold: #e8b23a;
+  --zl-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23f6efe2'/%3E%3Cpolygon points='4.02,-9.70 3.68,-3.68 9.70,-4.02 5.20,0.00 9.70,4.02 3.68,3.68 4.02,9.70 0.00,5.20 -4.02,9.70 -3.68,3.68 -9.70,4.02 -5.20,0.00 -9.70,-4.02 -3.68,-3.68 -4.02,-9.70 -0.00,-5.20' fill='%23c1272d' stroke='%23e8b23a' stroke-width='0.9'/%3E%3Cpolygon points='1.53,-3.70 1.56,-1.56 3.70,-1.53 2.20,0.00 3.70,1.53 1.56,1.56 1.53,3.70 0.00,2.20 -1.53,3.70 -1.56,1.56 -3.70,1.53 -2.20,0.00 -3.70,-1.53 -1.56,-1.56 -1.53,-3.70 -0.00,-2.20' fill='%23fffaf0'/%3E%3Cpolygon points='44.02,-9.70 43.68,-3.68 49.70,-4.02 45.20,0.00 49.70,4.02 43.68,3.68 44.02,9.70 40.00,5.20 35.98,9.70 36.32,3.68 30.30,4.02 34.80,0.00 30.30,-4.02 36.32,-3.68 35.98,-9.70 40.00,-5.20' fill='%23c1272d' stroke='%23e8b23a' stroke-width='0.9'/%3E%3Cpolygon points='41.53,-3.70 41.56,-1.56 43.70,-1.53 42.20,0.00 43.70,1.53 41.56,1.56 41.53,3.70 40.00,2.20 38.47,3.70 38.44,1.56 36.30,1.53 37.80,0.00 36.30,-1.53 38.44,-1.56 38.47,-3.70 40.00,-2.20' fill='%23fffaf0'/%3E%3Cpolygon points='4.02,30.30 3.68,36.32 9.70,35.98 5.20,40.00 9.70,44.02 3.68,43.68 4.02,49.70 0.00,45.20 -4.02,49.70 -3.68,43.68 -9.70,44.02 -5.20,40.00 -9.70,35.98 -3.68,36.32 -4.02,30.30 -0.00,34.80' fill='%23c1272d' stroke='%23e8b23a' stroke-width='0.9'/%3E%3Cpolygon points='1.53,36.30 1.56,38.44 3.70,38.47 2.20,40.00 3.70,41.53 1.56,41.56 1.53,43.70 0.00,42.20 -1.53,43.70 -1.56,41.56 -3.70,41.53 -2.20,40.00 -3.70,38.47 -1.56,38.44 -1.53,36.30 -0.00,37.80' fill='%23fffaf0'/%3E%3Cpolygon points='44.02,30.30 43.68,36.32 49.70,35.98 45.20,40.00 49.70,44.02 43.68,43.68 44.02,49.70 40.00,45.20 35.98,49.70 36.32,43.68 30.30,44.02 34.80,40.00 30.30,35.98 36.32,36.32 35.98,30.30 40.00,34.80' fill='%23c1272d' stroke='%23e8b23a' stroke-width='0.9'/%3E%3Cpolygon points='41.53,36.30 41.56,38.44 43.70,38.47 42.20,40.00 43.70,41.53 41.56,41.56 41.53,43.70 40.00,42.20 38.47,43.70 38.44,41.56 36.30,41.53 37.80,40.00 36.30,38.47 38.44,38.44 38.47,36.30 40.00,37.80' fill='%23fffaf0'/%3E%3Cpolygon points='20.0,-4.2 24.2,0 20.0,4.2 15.8,0' fill='%23fffaf0' stroke='%23006233' stroke-width='0.9'/%3E%3Cpolygon points='20.0,35.8 24.2,40 20.0,44.2 15.8,40' fill='%23fffaf0' stroke='%23006233' stroke-width='0.9'/%3E%3Cpolygon points='0,15.8 4.2,20.0 0,24.2 -4.2,20.0' fill='%23fffaf0' stroke='%23006233' stroke-width='0.9'/%3E%3Cpolygon points='40,15.8 44.2,20.0 40,24.2 35.8,20.0' fill='%23fffaf0' stroke='%23006233' stroke-width='0.9'/%3E%3Cpolygon points='25.36,7.07 25.37,14.63 32.93,14.64 27.60,20.00 32.93,25.36 25.37,25.37 25.36,32.93 20.00,27.60 14.64,32.93 14.63,25.37 7.07,25.36 12.40,20.00 7.07,14.64 14.63,14.63 14.64,7.07 20.00,12.40' fill='%23006233' stroke='%23e8b23a' stroke-width='1.08'/%3E%3Cpolygon points='20.00,13.00 21.45,16.49 24.95,15.05 23.51,18.55 27.00,20.00 23.51,21.45 24.95,24.95 21.45,23.51 20.00,27.00 18.55,23.51 15.05,24.95 16.49,21.45 13.00,20.00 16.49,18.55 15.05,15.05 18.55,16.49' fill='%23c1272d' stroke='%23e8b23a' stroke-width='0.9'/%3E%3Ccircle cx='20.0' cy='20.0' r='1.8' fill='%23fffaf0'/%3E%3C/svg%3E"); background-color: #f4ece0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23f4ece0'/%3E%3Cpolygon points='4.02,-9.70 3.68,-3.68 9.70,-4.02 5.20,0.00 9.70,4.02 3.68,3.68 4.02,9.70 0.00,5.20 -4.02,9.70 -3.68,3.68 -9.70,4.02 -5.20,0.00 -9.70,-4.02 -3.68,-3.68 -4.02,-9.70 -0.00,-5.20' fill='%23f2d3cf' stroke='%23e6d2a6' stroke-width='0.7'/%3E%3Cpolygon points='1.53,-3.70 1.56,-1.56 3.70,-1.53 2.20,0.00 3.70,1.53 1.56,1.56 1.53,3.70 0.00,2.20 -1.53,3.70 -1.56,1.56 -3.70,1.53 -2.20,0.00 -3.70,-1.53 -1.56,-1.56 -1.53,-3.70 -0.00,-2.20' fill='%23fbf7ef'/%3E%3Cpolygon points='44.02,-9.70 43.68,-3.68 49.70,-4.02 45.20,0.00 49.70,4.02 43.68,3.68 44.02,9.70 40.00,5.20 35.98,9.70 36.32,3.68 30.30,4.02 34.80,0.00 30.30,-4.02 36.32,-3.68 35.98,-9.70 40.00,-5.20' fill='%23f2d3cf' stroke='%23e6d2a6' stroke-width='0.7'/%3E%3Cpolygon points='41.53,-3.70 41.56,-1.56 43.70,-1.53 42.20,0.00 43.70,1.53 41.56,1.56 41.53,3.70 40.00,2.20 38.47,3.70 38.44,1.56 36.30,1.53 37.80,0.00 36.30,-1.53 38.44,-1.56 38.47,-3.70 40.00,-2.20' fill='%23fbf7ef'/%3E%3Cpolygon points='4.02,30.30 3.68,36.32 9.70,35.98 5.20,40.00 9.70,44.02 3.68,43.68 4.02,49.70 0.00,45.20 -4.02,49.70 -3.68,43.68 -9.70,44.02 -5.20,40.00 -9.70,35.98 -3.68,36.32 -4.02,30.30 -0.00,34.80' fill='%23f2d3cf' stroke='%23e6d2a6' stroke-width='0.7'/%3E%3Cpolygon points='1.53,36.30 1.56,38.44 3.70,38.47 2.20,40.00 3.70,41.53 1.56,41.56 1.53,43.70 0.00,42.20 -1.53,43.70 -1.56,41.56 -3.70,41.53 -2.20,40.00 -3.70,38.47 -1.56,38.44 -1.53,36.30 -0.00,37.80' fill='%23fbf7ef'/%3E%3Cpolygon points='44.02,30.30 43.68,36.32 49.70,35.98 45.20,40.00 49.70,44.02 43.68,43.68 44.02,49.70 40.00,45.20 35.98,49.70 36.32,43.68 30.30,44.02 34.80,40.00 30.30,35.98 36.32,36.32 35.98,30.30 40.00,34.80' fill='%23f2d3cf' stroke='%23e6d2a6' stroke-width='0.7'/%3E%3Cpolygon points='41.53,36.30 41.56,38.44 43.70,38.47 42.20,40.00 43.70,41.53 41.56,41.56 41.53,43.70 40.00,42.20 38.47,43.70 38.44,41.56 36.30,41.53 37.80,40.00 36.30,38.47 38.44,38.44 38.47,36.30 40.00,37.80' fill='%23fbf7ef'/%3E%3Cpolygon points='20.0,-4.2 24.2,0 20.0,4.2 15.8,0' fill='%23fbf7ef' stroke='%23d5e7da' stroke-width='0.7'/%3E%3Cpolygon points='20.0,35.8 24.2,40 20.0,44.2 15.8,40' fill='%23fbf7ef' stroke='%23d5e7da' stroke-width='0.7'/%3E%3Cpolygon points='0,15.8 4.2,20.0 0,24.2 -4.2,20.0' fill='%23fbf7ef' stroke='%23d5e7da' stroke-width='0.7'/%3E%3Cpolygon points='40,15.8 44.2,20.0 40,24.2 35.8,20.0' fill='%23fbf7ef' stroke='%23d5e7da' stroke-width='0.7'/%3E%3Cpolygon points='25.36,7.07 25.37,14.63 32.93,14.64 27.60,20.00 32.93,25.36 25.37,25.37 25.36,32.93 20.00,27.60 14.64,32.93 14.63,25.37 7.07,25.36 12.40,20.00 7.07,14.64 14.63,14.63 14.64,7.07 20.00,12.40' fill='%23d5e7da' stroke='%23e6d2a6' stroke-width='0.84'/%3E%3Cpolygon points='20.00,13.00 21.45,16.49 24.95,15.05 23.51,18.55 27.00,20.00 23.51,21.45 24.95,24.95 21.45,23.51 20.00,27.00 18.55,23.51 15.05,24.95 16.49,21.45 13.00,20.00 16.49,18.55 15.05,15.05 18.55,16.49' fill='%23f2d3cf' stroke='%23e6d2a6' stroke-width='0.7'/%3E%3Ccircle cx='20.0' cy='20.0' r='1.8' fill='%23fbf7ef'/%3E%3C/svg%3E"); background-size: 72px 72px; background-attachment: fixed }
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) body.zlayji { background-color: #16120f; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%2316120f'/%3E%3Cpolygon points='4.02,-9.70 3.68,-3.68 9.70,-4.02 5.20,0.00 9.70,4.02 3.68,3.68 4.02,9.70 0.00,5.20 -4.02,9.70 -3.68,3.68 -9.70,4.02 -5.20,0.00 -9.70,-4.02 -3.68,-3.68 -4.02,-9.70 -0.00,-5.20' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='1.53,-3.70 1.56,-1.56 3.70,-1.53 2.20,0.00 3.70,1.53 1.56,1.56 1.53,3.70 0.00,2.20 -1.53,3.70 -1.56,1.56 -3.70,1.53 -2.20,0.00 -3.70,-1.53 -1.56,-1.56 -1.53,-3.70 -0.00,-2.20' fill='%23221c17'/%3E%3Cpolygon points='44.02,-9.70 43.68,-3.68 49.70,-4.02 45.20,0.00 49.70,4.02 43.68,3.68 44.02,9.70 40.00,5.20 35.98,9.70 36.32,3.68 30.30,4.02 34.80,0.00 30.30,-4.02 36.32,-3.68 35.98,-9.70 40.00,-5.20' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='41.53,-3.70 41.56,-1.56 43.70,-1.53 42.20,0.00 43.70,1.53 41.56,1.56 41.53,3.70 40.00,2.20 38.47,3.70 38.44,1.56 36.30,1.53 37.80,0.00 36.30,-1.53 38.44,-1.56 38.47,-3.70 40.00,-2.20' fill='%23221c17'/%3E%3Cpolygon points='4.02,30.30 3.68,36.32 9.70,35.98 5.20,40.00 9.70,44.02 3.68,43.68 4.02,49.70 0.00,45.20 -4.02,49.70 -3.68,43.68 -9.70,44.02 -5.20,40.00 -9.70,35.98 -3.68,36.32 -4.02,30.30 -0.00,34.80' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='1.53,36.30 1.56,38.44 3.70,38.47 2.20,40.00 3.70,41.53 1.56,41.56 1.53,43.70 0.00,42.20 -1.53,43.70 -1.56,41.56 -3.70,41.53 -2.20,40.00 -3.70,38.47 -1.56,38.44 -1.53,36.30 -0.00,37.80' fill='%23221c17'/%3E%3Cpolygon points='44.02,30.30 43.68,36.32 49.70,35.98 45.20,40.00 49.70,44.02 43.68,43.68 44.02,49.70 40.00,45.20 35.98,49.70 36.32,43.68 30.30,44.02 34.80,40.00 30.30,35.98 36.32,36.32 35.98,30.30 40.00,34.80' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='41.53,36.30 41.56,38.44 43.70,38.47 42.20,40.00 43.70,41.53 41.56,41.56 41.53,43.70 40.00,42.20 38.47,43.70 38.44,41.56 36.30,41.53 37.80,40.00 36.30,38.47 38.44,38.44 38.47,36.30 40.00,37.80' fill='%23221c17'/%3E%3Cpolygon points='20.0,-4.2 24.2,0 20.0,4.2 15.8,0' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='20.0,35.8 24.2,40 20.0,44.2 15.8,40' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='0,15.8 4.2,20.0 0,24.2 -4.2,20.0' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='40,15.8 44.2,20.0 40,24.2 35.8,20.0' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='25.36,7.07 25.37,14.63 32.93,14.64 27.60,20.00 32.93,25.36 25.37,25.37 25.36,32.93 20.00,27.60 14.64,32.93 14.63,25.37 7.07,25.36 12.40,20.00 7.07,14.64 14.63,14.63 14.64,7.07 20.00,12.40' fill='%23123826' stroke='%235c4a2a' stroke-width='0.84'/%3E%3Cpolygon points='20.00,13.00 21.45,16.49 24.95,15.05 23.51,18.55 27.00,20.00 23.51,21.45 24.95,24.95 21.45,23.51 20.00,27.00 18.55,23.51 15.05,24.95 16.49,21.45 13.00,20.00 16.49,18.55 15.05,15.05 18.55,16.49' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Ccircle cx='20.0' cy='20.0' r='1.8' fill='%23221c17'/%3E%3C/svg%3E") } }
+:root[data-theme=dark] body.zlayji { background-color: #16120f; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%2316120f'/%3E%3Cpolygon points='4.02,-9.70 3.68,-3.68 9.70,-4.02 5.20,0.00 9.70,4.02 3.68,3.68 4.02,9.70 0.00,5.20 -4.02,9.70 -3.68,3.68 -9.70,4.02 -5.20,0.00 -9.70,-4.02 -3.68,-3.68 -4.02,-9.70 -0.00,-5.20' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='1.53,-3.70 1.56,-1.56 3.70,-1.53 2.20,0.00 3.70,1.53 1.56,1.56 1.53,3.70 0.00,2.20 -1.53,3.70 -1.56,1.56 -3.70,1.53 -2.20,0.00 -3.70,-1.53 -1.56,-1.56 -1.53,-3.70 -0.00,-2.20' fill='%23221c17'/%3E%3Cpolygon points='44.02,-9.70 43.68,-3.68 49.70,-4.02 45.20,0.00 49.70,4.02 43.68,3.68 44.02,9.70 40.00,5.20 35.98,9.70 36.32,3.68 30.30,4.02 34.80,0.00 30.30,-4.02 36.32,-3.68 35.98,-9.70 40.00,-5.20' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='41.53,-3.70 41.56,-1.56 43.70,-1.53 42.20,0.00 43.70,1.53 41.56,1.56 41.53,3.70 40.00,2.20 38.47,3.70 38.44,1.56 36.30,1.53 37.80,0.00 36.30,-1.53 38.44,-1.56 38.47,-3.70 40.00,-2.20' fill='%23221c17'/%3E%3Cpolygon points='4.02,30.30 3.68,36.32 9.70,35.98 5.20,40.00 9.70,44.02 3.68,43.68 4.02,49.70 0.00,45.20 -4.02,49.70 -3.68,43.68 -9.70,44.02 -5.20,40.00 -9.70,35.98 -3.68,36.32 -4.02,30.30 -0.00,34.80' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='1.53,36.30 1.56,38.44 3.70,38.47 2.20,40.00 3.70,41.53 1.56,41.56 1.53,43.70 0.00,42.20 -1.53,43.70 -1.56,41.56 -3.70,41.53 -2.20,40.00 -3.70,38.47 -1.56,38.44 -1.53,36.30 -0.00,37.80' fill='%23221c17'/%3E%3Cpolygon points='44.02,30.30 43.68,36.32 49.70,35.98 45.20,40.00 49.70,44.02 43.68,43.68 44.02,49.70 40.00,45.20 35.98,49.70 36.32,43.68 30.30,44.02 34.80,40.00 30.30,35.98 36.32,36.32 35.98,30.30 40.00,34.80' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Cpolygon points='41.53,36.30 41.56,38.44 43.70,38.47 42.20,40.00 43.70,41.53 41.56,41.56 41.53,43.70 40.00,42.20 38.47,43.70 38.44,41.56 36.30,41.53 37.80,40.00 36.30,38.47 38.44,38.44 38.47,36.30 40.00,37.80' fill='%23221c17'/%3E%3Cpolygon points='20.0,-4.2 24.2,0 20.0,4.2 15.8,0' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='20.0,35.8 24.2,40 20.0,44.2 15.8,40' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='0,15.8 4.2,20.0 0,24.2 -4.2,20.0' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='40,15.8 44.2,20.0 40,24.2 35.8,20.0' fill='%23221c17' stroke='%23123826' stroke-width='0.7'/%3E%3Cpolygon points='25.36,7.07 25.37,14.63 32.93,14.64 27.60,20.00 32.93,25.36 25.37,25.37 25.36,32.93 20.00,27.60 14.64,32.93 14.63,25.37 7.07,25.36 12.40,20.00 7.07,14.64 14.63,14.63 14.64,7.07 20.00,12.40' fill='%23123826' stroke='%235c4a2a' stroke-width='0.84'/%3E%3Cpolygon points='20.00,13.00 21.45,16.49 24.95,15.05 23.51,18.55 27.00,20.00 23.51,21.45 24.95,24.95 21.45,23.51 20.00,27.00 18.55,23.51 15.05,24.95 16.49,21.45 13.00,20.00 16.49,18.55 15.05,15.05 18.55,16.49' fill='%233f1719' stroke='%235c4a2a' stroke-width='0.7'/%3E%3Ccircle cx='20.0' cy='20.0' r='1.8' fill='%23221c17'/%3E%3C/svg%3E") }
+
+/* header and tab bar: green with a zellige strip */
+body.zlayji .top { background: var(--zl-green); position: relative; box-shadow: none; padding-bottom: 18px }
+body.zlayji .top::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: var(--zl-tile) 0 50% / 18px 18px repeat-x;
+  box-shadow: inset 0 1px 0 var(--zl-gold), inset 0 -1px 0 var(--zl-gold) }
+body.zlayji .tabs a[aria-current=page] { background: rgba(255,255,255,.18) }
+@media (max-width: 720px) {
+  body.zlayji .top { padding-bottom: 16px }
+  body.zlayji .tabs { background: var(--zl-green); box-shadow: 0 -6px 20px rgba(0,0,0,.25); padding-top: 14px }
+  body.zlayji .tabs::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 8px; background: var(--zl-tile) 0 50% / 16px 16px repeat-x;
+    box-shadow: inset 0 1px 0 var(--zl-gold), inset 0 -1px 0 var(--zl-gold) }
+}
+
+/* the table: red felt, a full zellige frame, gold rule, a faint green star */
+body.zlayji .table { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50.0 13.0 L73.5 85.4 L12.0 40.6 L88.0 40.6 L26.5 85.4 Z' fill='none' stroke='%230a7a42' stroke-width='3.4' stroke-linejoin='round'/%3E%3C/svg%3E") center 42% / min(62%, 400px) no-repeat, radial-gradient(ellipse at 50% 38%, #c92a32, #9b1c22 52%, #5e0f14);
+  padding: calc(clamp(14px, 3vw, 28px) + 26px); box-shadow: 0 18px 40px -20px rgba(0,0,0,.6) }
+body.zlayji .table::before { inset: 0; border-radius: 22px; opacity: 1; padding: 22px;
+  background: var(--zl-tile) 0 0 / 44px 44px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  box-shadow: inset 0 0 0 2px var(--zl-gold) }
+body.zlayji .table::after { content: ''; position: absolute; inset: 22px; border-radius: 12px; pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--zl-gold), inset 0 0 0 6px rgba(0,0,0,.22) }
+@media (max-width: 720px) { body.zlayji .table { padding: 30px 20px 20px } body.zlayji .table::before { padding: 14px; background-size: 28px 28px } body.zlayji .table::after { inset: 14px } }
+body.zlayji .hand-wrap { background: rgba(40,0,4,.32); box-shadow: inset 0 0 0 1px rgba(232,178,58,.35) }
+body.zlayji .potential { background: rgba(40,0,4,.35) }
+
+/* cards: zellige backs with a gold rim, warm faces */
+body.zlayji .card.back, body.zlayji .card.flipping::before { background: var(--zl-tile) 0 0 / 20px 20px;
+  box-shadow: inset 0 0 0 3px var(--zl-gold), inset 0 0 0 5px #fffaf0, 0 6px 14px -6px rgba(0,0,0,.5) }
+body.zlayji .card { background: linear-gradient(#fffdf8, #f8efdf) }
+body.zlayji .card.joker { background: linear-gradient(160deg, #eafff3, #b7e6c9); color: var(--zl-green) }
+body.zlayji .card.joker .pip { color: var(--zl-red) }
+body.zlayji .card .as { background: var(--zl-green); color: #fff }
+
+/* melds: swivi green, tirci gold */
+body.zlayji .group.meld-swivi { background: rgba(0,98,51,.42); box-shadow: inset 0 0 0 2px #35c27a }
+body.zlayji .group.meld-swivi .group-label { color: #9cf3c4 }
+body.zlayji .group.meld-tirci { background: rgba(232,178,58,.2); box-shadow: inset 0 0 0 2px var(--zl-gold) }
+body.zlayji .group.meld-tirci .group-label { color: #ffd57a }
+body.zlayji .group.loose { background: rgba(0,0,0,.2) }
+body.zlayji .meld.meld-swivi { box-shadow: inset 0 0 0 2px #35c27a } body.zlayji .meld.meld-tirci { box-shadow: inset 0 0 0 2px var(--zl-gold) }
+body.zlayji .potential.is-good { border-color: #35c27a } body.zlayji .potential.is-some { border-color: var(--zl-gold) }
+
+/* buttons, switches, scores */
+body.zlayji .btn.primary, body.zlayji .actions .btn.primary { background: var(--zl-green-2); border-color: var(--zl-gold); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15) }
+body.zlayji .btn.pulse { animation-name: zlpulse }
+@keyframes zlpulse { 50% { box-shadow: 0 0 0 9px rgba(53,194,122,.3) } }
+body.zlayji .seg-btn.on { background: var(--zl-gold); color: #2a1d05 }
+body.zlayji input.switch:checked { background: var(--zl-green-2) }
+body.zlayji input[type=checkbox]:not(.switch) { accent-color: var(--zl-green-2) }
+body.zlayji .score .num, body.zlayji .big-num { color: var(--zl-red) }
+body.zlayji .score .p.right .num { color: var(--zl-green-2) }
+body.zlayji .turn-dot { background: var(--zl-green-2) }
+body.zlayji .bar .a { background: var(--zl-red) } body.zlayji .bar .b { background: var(--zl-green-2) }
+
+/* panels get a zellige strip along the top */
+body.zlayji .panel, body.zlayji .log, body.zlayji .result { border: 0; border-top: 10px solid transparent;
+  background: linear-gradient(var(--panel), var(--panel)) padding-box, var(--zl-tile) 0 0 / 20px 20px border-box;
+  box-shadow: 0 0 0 1px rgba(193,39,45,.25), 0 10px 26px -18px rgba(0,0,0,.45) }
+body.zlayji .page-title { display: inline-block; background: var(--panel); padding: 2px 14px; border-radius: 12px; box-shadow: 0 0 0 1px rgba(193,39,45,.2) }
+body.zlayji .banner { box-shadow: 0 0 0 2px var(--zl-gold) }
+body.zlayji #toast { background: var(--zl-green); box-shadow: 0 0 0 2px var(--zl-gold) }
+
+/* bits used in and out of Zlayji mode */
+.zl-panel { animation: rise .35s var(--ease) both; border-color: #0a7a42; box-shadow: inset 0 3px 0 #c1272d }
 .zl-title { display: inline-flex; align-items: center; gap: 8px }
 .zl-title svg, .zl-flag svg { width: 30px; height: 20px; display: block; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.3) }
 .zl-flag { display: grid; place-items: center; animation: rise .3s var(--ease) both }
-body.zlayji .switch:checked { background: #0a7a42 }
+.spark.zl-red { color: #c1272d } .spark.zl-green { color: #0a8a4a } .spark.zl-gold { color: #e8b23a }

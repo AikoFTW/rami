@@ -223,7 +223,7 @@
     const btn = (document.querySelector('#zlSwitch') || document.querySelector('.zl-flag'))?.getBoundingClientRect(); if (!btn) return;
     for (let i = 0; i < 14; i++) {
       const p = document.createElement('span');
-      p.className = 'spark ' + (i % 2 ? 'zl-red' : 'zl-green'); p.textContent = '★';
+      p.className = 'spark ' + ['zl-red', 'zl-green', 'zl-gold'][i % 3]; p.textContent = '★';
       Object.assign(p.style, { left: btn.left + btn.width / 2 + 'px', top: btn.top + btn.height / 2 + 'px' });
       document.body.appendChild(p);
       const x = (Math.random() - .5) * 260, y = 60 + Math.random() * 220;
@@ -449,7 +449,7 @@
     const n = won ? (zl ? 36 : 28) : 10, sym = zl ? ['★', '★', '♥', '★', '♦'] : ['♠', '♥', '♦', '♣', '★'];
     for (let i = 0; i < n; i++) {
       const p = document.createElement('span');
-      p.className = 'spark ' + (zl ? (i % 2 ? 'zl-red' : 'zl-green') : 's' + (i % 5));
+      p.className = 'spark ' + (zl ? ['zl-red', 'zl-green', 'zl-gold'][i % 3] : 's' + (i % 5));
       p.textContent = sym[i % 5];
       Object.assign(p.style, { left: box.left + box.width / 2 + 'px', top: box.top + box.height * .35 + 'px' });
       document.body.appendChild(p);
@@ -709,6 +709,11 @@
           <div class="field"><label for="soundSwitch">${esc(t('sound'))}<small>${esc(t('soundS'))}</small></label><input type="checkbox" class="switch" id="soundSwitch" ${p.sound !== false ? 'checked' : ''}></div>
           <div id="notifyRow"></div>
         </div>
+        <div class="secret">
+        ${zlOpen ? `<div class="panel settings zl-panel"><div class="field"><label for="zlSwitch"><span class="zl-title">${FLAG}${esc(t('zlayji'))}</span><small>${esc(t('zlayjiS'))}</small></label>
+          <input type="checkbox" class="switch" id="zlSwitch" ${p.zlayji ? 'checked' : ''}></div></div>`
+        : `<button type="button" class="secret-star" id="secretStar" aria-label="★">★</button>`}
+        </div>
         <details class="panel settings rules-box"><summary><h2>${esc(t('houseRules'))}</h2><span class="hint">${esc(t('sharedHint'))}</span></summary>
         <form id="rules">
         ${field('jokersL', 'jokersS', num('jokers', 0, 4))}
@@ -723,12 +728,7 @@
         ${field('whoStarts', '', opt('starter', r.starter, [['alternate', t('takeTurns')], ['loser', t('whoLost')], ['winner', t('whoWon')]]))}
         <button class="btn primary">${esc(t('saveRules'))}</button></form></details>
         <p class="storage ${S.storage}">${esc(t('storageL'))}: <b>${esc(S.storage === 'mongodb' ? t('storageMongo') : t('storageFile'))}</b></p>
-      </div></div>
-      <div class="secret">
-        ${zlOpen ? `<div class="panel settings zl-panel"><div class="field"><label for="zlSwitch"><span class="zl-title">${FLAG}${esc(t('zlayji'))}</span><small>${esc(t('zlayjiS'))}</small></label>
-          <input type="checkbox" class="switch" id="zlSwitch" ${p.zlayji ? 'checked' : ''}></div></div>`
-        : `<button type="button" class="secret-star" id="secretStar" aria-label="★">★</button>`}
-      </div>`;
+      </div></div>`;
 
     $('#soundSwitch').addEventListener('change', e => {
       S.me.prefs = { ...S.me.prefs, sound: e.target.checked };
