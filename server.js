@@ -269,8 +269,24 @@ async function api(req, res, url) {
   return send(res, 404, { error: 'Not found' });
 }
 
+// One-time update when the default win rule changes: house rules saved under the
+// old 2 swivi + 2 tirci default, and the game on the table, switch to 1 + 1.
+function migrateRules() {
+  if ((db.rules.version || 0) >= game.DEFAULT_RULES.version) return;
+  if (db.rules.minSwivi === 2 && db.rules.minTirci === 2) { db.rules.minSwivi = 1; db.rules.minTirci = 1; }
+  db.rules.version = game.DEFAULT_RULES.version;
+  persist(() => store.saveRules(db.rules));
+  const g = db.game;
+  if (g && !g.result && g.rules.minSwivi === 2 && g.rules.minTirci === 2) {
+    g.rules.minSwivi = 1; g.rules.minTirci = 1;
+    persist(() => store.saveGame(g));
+  }
+  console.log('House rules updated: a Rami needs 1 swivi + 1 tirci.');
+}
+
 async function start() {
   db = await store.load(game.DEFAULT_RULES);
+  migrateRules();
   const server = http.createServer(async (req, res) => {
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
     const url = new URL(req.url, 'http://x');

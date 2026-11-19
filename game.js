@@ -12,8 +12,9 @@ const DEFAULT_RULES = {
   jokers: 4,              // 0-4 jokers in the two decks
   handSize: 14,           // cards each; the starter gets one extra
   minMeld: 3,             // smallest swivi / tirci
-  minSwivi: 2,            // swivis a winning hand needs (same suit, in a row)
-  minTirci: 2,            // tircis a winning hand needs (same number, different suits)
+  minSwivi: 1,            // swivis a winning hand needs (same suit, in a row)
+  minTirci: 1,            // tircis a winning hand needs (same number, different suits)
+  version: 3,             // bumped when the defaults change, so saved rules can be updated once
   aceLow: true,           // A-2-3
   aceHigh: true,          // Q-K-A
   maxJokersPerMeld: 4,    // limit jokers inside one meld
@@ -34,6 +35,7 @@ function cleanRules(input) {
   for (const k of ['aceLow', 'aceHigh', 'allowDiscardPickup'])
     if (typeof input[k] === 'boolean') r[k] = input[k];
   if (['alternate', 'loser', 'winner'].includes(input.starter)) r.starter = input.starter;
+  r.version = DEFAULT_RULES.version;
   return r;
 }
 

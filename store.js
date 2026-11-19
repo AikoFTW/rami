@@ -45,7 +45,7 @@ class MongoStore {
     for (const s of await this.sessions.find({ expiresAt: { $gt: new Date() } }).toArray())
       state.sessions[s._id] = { uid: s.uid, exp: s.expiresAt.getTime() };
     const rules = await this.settings.findOne({ _id: 'rules' });
-    if (rules) { const { _id, requireSwivi, requireTirci, ...r } = rules; state.rules = { ...state.rules, ...r }; }
+    if (rules) { const { _id, requireSwivi, requireTirci, ...r } = rules; state.rules = { ...state.rules, version: 0, ...r }; }
     const games = await this.games.find().sort({ _id: 1 }).toArray();
     for (const doc of games) {
       const { _id, ...g } = doc;
@@ -73,7 +73,7 @@ class FileStore {
     catch (e) { if (e.code !== 'ENOENT') throw e; this.data = empty; }
     const d = this.data, nos = Object.keys(d.games).map(Number).sort((a, b) => a - b);
     return {
-      users: d.users, sessions: d.sessions, rules: (({ requireSwivi, requireTirci, ...r }) => ({ ...defaultRules, ...r }))(d.rules || {}),
+      users: d.users, sessions: d.sessions, rules: d.rules ? (({ requireSwivi, requireTirci, ...r }) => ({ ...defaultRules, version: 0, ...r }))(d.rules) : { ...defaultRules },
       game: nos.length ? d.games[nos[nos.length - 1]] : null,
       history: nos.map(n => d.games[n]).filter(g => g.result).map(summary),
       nextGameNo: (nos[nos.length - 1] || 0) + 1,

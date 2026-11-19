@@ -21,9 +21,9 @@ t('joker substitutes even when natural exists', () => assert(ok(['4-H-0','J-0','
 t('no-joker rule', () => assert(!ok(['7-H-0','J-0','9-H-0','4-H-0','4-S-0','4-D-0'], { ...R, maxJokersPerMeld: 0 })));
 t('long run 13', () => assert(ok(['1-S-0','2-S-0','3-S-0','4-S-0','5-S-0','6-S-0','7-S-0','8-S-0','9-S-0','10-S-0','11-S-0','12-S-0','13-S-0','4-H-0','4-D-0','4-C-0'])));
 // the new default: 2 swivi + 2 tirci
-const R2 = DEFAULT_RULES;
-t('default needs 2 swivi + 2 tirci', () => {
-  assert.equal(R2.minSwivi, 2); assert.equal(R2.minTirci, 2);
+const R2 = { ...DEFAULT_RULES, minSwivi: 2, minTirci: 2 };
+t('default is 1 swivi + 1 tirci', () => { assert.equal(DEFAULT_RULES.minSwivi, 1); assert.equal(DEFAULT_RULES.minTirci, 1); });
+t('2 swivi + 2 tirci setting still works', () => {
   assert(ok(win, R2));   // win = 2 swivi + 2 tirci
   assert(!ok(['7-H-0','8-H-0','9-H-0','3-C-0','4-C-0','5-C-0','6-C-0','13-S-0','13-D-0','13-C-0','2-S-0','3-S-0','4-S-0'], R2));   // 3 swivi + 1 tirci
 });
