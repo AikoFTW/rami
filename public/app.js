@@ -555,11 +555,24 @@
   function resultPanel(g, oppId) {
     const iWon = g.winner === me();
     const how = g.result === 'resign' ? t('resigned', { name: nameOf(g.players.find(p => p !== g.winner)) }) : t('wonInTurns', { n: g.turns });
-    const melds = (g.melds || []).map(m => `<div class="meld meld-${m.type}"><span class="meld-label">${esc(t(m.type))}</span>${m.cards.map(c => cardHTML(c, 'mini')).join('')}</div>`).join('');
+    // a meld box, with each joker showing the card it stands for
+    const meldBox = m => `<div class="meld meld-${m.type}"><span class="meld-label">${esc(t(m.type))}</span>${m.cards.map((c, i) => {
+      const as = parse(c).joker ? jokerStandsFor(m, i) : null;
+      return cardHTML(c, 'mini', 'div', as ? (m.type === 'tirci' ? RANK(as.r) : shortCard(as)) : '');
+    }).join('')}</div>`;
+    const melds = (g.melds || []).map(meldBox).join('');
+    // the loser's hand, laid out as their swivis and tircis plus the cards that didn't fit
     const loserHand = iWon ? g.oppHand : g.myHand;
+    let loserHTML = '';
+    if (loserHand && g.result === 'rami') {
+      const lay = bestMelds(sortCards(loserHand, sortBy()), g.rules);
+      const loose = lay.loose.length ? `<div class="meld meld-loose"><span class="meld-label">${esc(t('loose'))}</span>${lay.loose.map(c => cardHTML(c, 'mini')).join('')}</div>` : '';
+      loserHTML = `<p class="loser-title"><b>${esc(iWon ? t('theirHand', { name: nameOf(oppId) }) : t('yourHand'))}</b></p>
+        <div class="melds">${lay.melds.map(meldBox).join('')}${loose}</div>`;
+    }
     return `<div class="result"><h2>${esc(iWon ? t('ramiYouWin') : t('xWins', { name: nameOf(g.winner) }))}</h2><p>${esc(how)}</p>
       ${melds ? `<div class="melds">${melds}</div>` : ''}
-      ${loserHand && g.result === 'rami' ? `<p><b>${esc(iWon ? t('theirHand', { name: nameOf(oppId) }) : t('yourHand'))}</b></p><div class="melds"><div class="meld">${loserHand.map(c => cardHTML(c, 'mini')).join('')}</div></div>` : ''}
+      ${loserHTML}
       <button class="btn primary big" id="again">${esc(t('dealNext'))}</button></div>`;
   }
 
