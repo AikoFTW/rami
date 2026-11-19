@@ -7,7 +7,7 @@ Moroccan Rami for two, played in the browser with live turns, the way you'd play
 - Two decks plus jokers (0 to 4). Everyone gets 14 cards, and the starting player gets 15 and opens by discarding.
 - On your turn, draw from the deck or take the top discard, then throw one card away.
 - Nothing goes on the table until you have a full **Rami**: every card except your final discard is in a meld.
-- A Rami needs at least one **swivi** (same suit, numbers in a row) and at least one **tirci** (same number, different suits).
+- A Rami needs at least two **swivis** (same suit, numbers in a row) and two **tircis** (same number, different suits). Both counts can be changed in Settings.
 - The ace is low (A-2-3) or high (Q-K-A). No wrap-around.
 - The first player to Rami wins, and the scoreboard counts wins.
 

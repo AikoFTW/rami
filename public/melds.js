@@ -17,11 +17,11 @@ function findRami(ids, rules) {
   const jok = ids.filter(id => id[0] === 'J');
   const maxJ = rules.maxJokersPerMeld;
 
-  function rec(nat, jok, hasSwivi, hasTirci) {
+  const needS = rules.minSwivi ?? 0, needT = rules.minTirci ?? 0;
+  function rec(nat, jok, nS, nT) {
     if (!nat.length) {
       if (jok.length) return null;
-      if (rules.requireSwivi && !hasSwivi) return null;
-      if (rules.requireTirci && !hasTirci) return null;
+      if (nS < needS || nT < needT) return null;
       return [];
     }
     const c = nat[0], rest = nat.slice(1);
@@ -36,7 +36,7 @@ function findRami(ids, rules) {
       for (let j = 0; j <= Math.min(jok.length, maxJ) && n + j <= 4; j++) {
         if (n + j < rules.minMeld) continue;
         const nr = rest.filter(x => !pick.includes(x));
-        const r = rec(nr, jok.slice(j), hasSwivi, true);
+        const r = rec(nr, jok.slice(j), nS, nT + 1);
         if (r) return [{ type: 'tirci', cards: [c.id, ...pick.map(x => x.id), ...jok.slice(0, j)] }, ...r];
       }
     }
@@ -52,7 +52,7 @@ function findRami(ids, rules) {
       for (let s = sMin; s <= p; s++) {
         for (let e = Math.max(p, s + rules.minMeld - 1); e <= Math.min(highest, s + 12); e++) {
           const r = fillRun(s, e, p, c, rest, jok, maxJ, (pool, used, meld) => {
-            const tail = rec(pool, jok.slice(used), true, hasTirci);
+            const tail = rec(pool, jok.slice(used), nS + 1, nT);
             return tail ? [{ type: 'swivi', cards: meld }, ...tail] : null;
           });
           if (r) return r;
@@ -88,7 +88,7 @@ function findRami(ids, rules) {
     return step(s, pool, 0);
   }
 
-  return rec(nat, jok, false, false);
+  return rec(nat, jok, 0, 0);
 }
 
 
@@ -160,7 +160,81 @@ function bestMelds(ids, rules) {
   return { melds, loose: ids.filter(id => !used.has(id)) };
 }
 
-const api = { parse, findRami, bestMelds };
+// ---------- What a joker stands for inside a meld ----------
+// Returns {r, s} for a swivi slot, {r} for a tirci, or null.
+function jokerStandsFor(meld, index) {
+  const cards = meld.cards.map(parse);
+  if (meld.type === 'tirci') { const n = cards.find(c => !c.joker); return n ? { r: n.r } : null; }
+  // pick a natural card to anchor positions; prefer a non-ace
+  let anchor = cards.findIndex(c => !c.joker && c.r !== 1);
+  let start;
+  if (anchor >= 0) start = cards[anchor].r - anchor;
+  else { anchor = cards.findIndex(c => !c.joker); if (anchor < 0) return null; start = (anchor === 0 ? 1 : 14) - anchor; }
+  if (start + cards.length - 1 > 14) return null;
+  const pos = start + index;
+  const suit = cards.find(c => !c.joker).s;
+  return { r: pos === 14 ? 1 : pos, s: suit };
+}
+
+// ---------- Where could a joker go? ----------
+// Options built from the natural cards in `ids`: fill a gap or extend a run,
+// or join a tirci. Each option is a ready meld with 'JOKER' marking the joker's spot.
+function jokerOptions(ids, rules) {
+  if (rules.maxJokersPerMeld < 1) return [];
+  const nat = ids.map(parse).filter(c => !c.joker);
+  const out = [];
+  // tirci: same rank, distinct suits
+  const byRank = {};
+  for (const c of nat) { byRank[c.r] = byRank[c.r] || {}; if (!byRank[c.r][c.s]) byRank[c.r][c.s] = c.id; }
+  for (const [r, suits] of Object.entries(byRank)) {
+    const k = Object.keys(suits).length;
+    if (k + 1 >= rules.minMeld && k + 1 <= 4) out.push({ type: 'tirci', cards: [...Object.values(suits), 'JOKER'], stands: { r: +r } });
+  }
+  // swivi: a missing slot next to a run of naturals
+  const lowest = rules.aceLow ? 1 : 2, highest = rules.aceHigh ? 14 : 13;
+  for (const s of ['S', 'H', 'D', 'C']) {
+    const at = {};
+    for (const c of nat) if (c.s === s) {
+      if (c.r === 1) { if (rules.aceLow && !at[1]) at[1] = c.id; if (rules.aceHigh && !at[14]) at[14] = c.id; }
+      else if (!at[c.r]) at[c.r] = c.id;
+    }
+    for (let m = lowest; m <= highest; m++) {
+      if (at[m] || !(at[m - 1] || at[m + 1])) continue;
+      let L = m, R = m;
+      while (L - 1 >= lowest && at[L - 1]) L--;
+      while (R + 1 <= highest && at[R + 1]) R++;
+      if (R - L + 1 > 13) { if (m === L) R--; else L++; }      // an ace can't sit at both ends
+      if (R - L + 1 < rules.minMeld) continue;
+      const cards = [];
+      for (let q = L; q <= R; q++) cards.push(q === m ? 'JOKER' : at[q]);
+      if (new Set(cards).size !== cards.length) continue;      // same ace used twice
+      out.push({ type: 'swivi', cards, stands: { r: m === 14 ? 1 : m, s } });
+    }
+  }
+  return out;
+}
+
+// ---------- What would one card do for this hand? ----------
+function cardPotential(base, card, rules) {
+  const placed = r => r.melds.reduce((n, m) => n + m.cards.length, 0);
+  const before = bestMelds(base, rules), after = bestMelds([...base, card], rules);
+  const meld = after.melds.find(m => m.cards.includes(card)) || null;
+  const gain = placed(after) - placed(before);
+  const partners = [];
+  const c = parse(card);
+  if (!meld && !c.joker) {
+    const pos = x => x.r === 1 ? [1, 14] : [x.r];
+    for (const id of after.loose) {
+      if (id === card) continue;
+      const o = parse(id); if (o.joker) continue;
+      if (o.r === c.r && o.s !== c.s) partners.push({ type: 'tirci', id });
+      else if (o.s === c.s && pos(o).some(a => pos(c).some(b => Math.abs(a - b) <= 2 && a !== b))) partners.push({ type: 'swivi', id });
+    }
+  }
+  return { meld, gain, partners };
+}
+
+const api = { parse, findRami, bestMelds, jokerOptions, jokerStandsFor, cardPotential };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 else root.RamiMelds = api;
 })(typeof self !== 'undefined' ? self : this);

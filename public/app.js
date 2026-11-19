@@ -7,13 +7,16 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const FELTS = ['#0d4f43', '#134a6b', '#6b1f2a', '#3b2a55', '#2f3a2a', '#5a3a1c'];
   const LANGS = ['en', 'ar', 'fr'];
-  const { bestMelds, findRami } = self.RamiMelds;
+  const { bestMelds, findRami, jokerOptions, jokerStandsFor, cardPotential } = self.RamiMelds;
+  const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let S = null;            // last state from the server
   let sel = null;          // selected card id
   let dragId = null;
   let wasMyTurn = false;
   let reorderTimer = null;
+  let lastRoute = null;
+  let pins = {}, pinsGame = null;   // where the player chose to put each joker, per game
 
   // ---------- language ----------
   const stored = (() => { try { return localStorage.getItem('rami-lang'); } catch { return null; } })();
@@ -24,7 +27,12 @@
     const s = D()[key] ?? self.RamiI18n.en[key] ?? key;
     return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
   }
-  const errText = (code, fallback) => D().err[code] || fallback || D().err.generic;
+  const errText = (code, fallback) => {
+    const msg = D().err[code];
+    if (!msg) return fallback || D().err.generic;
+    const r = S?.game?.rules || S?.rules || {};
+    return msg.replace('{s}', r.minSwivi ?? 1).replace('{t}', r.minTirci ?? 1);
+  };
   function setLang(l, save) {
     if (!LANGS.includes(l)) return;
     lang = l;
@@ -75,10 +83,11 @@
   const nameOf = id => S?.users.find(u => u.id === id)?.name || '?';
   const me = () => S.me.id;
 
-  function cardHTML(id, extra = '', tag = 'div') {
+  const shortCard = x => x ? RANK(x.r) + (x.s ? SUIT[x.s] : '') : '';
+  function cardHTML(id, extra = '', tag = 'div', as = '') {
     if (!id) return `<div class="empty-slot"></div>`;
     const c = parse(id);
-    if (c.joker) return `<${tag} class="card joker ${extra}" data-id="${id}" aria-label="${esc(t('joker'))}"><span class="tl">JOKER</span><span class="pip">★</span></${tag}>`;
+    if (c.joker) return `<${tag} class="card joker ${extra}" data-id="${id}" aria-label="${esc(t('joker'))}${as ? ' ' + esc(as) : ''}"><span class="tl">JOKER</span><span class="pip">★</span>${as ? `<span class="as">${esc(as)}</span>` : ''}</${tag}>`;
     const face = c.r === 1 || c.r > 10;
     return `<${tag} class="card s-${c.s} ${extra}" data-id="${id}" aria-label="${esc(t('ofSuit', { rank: RANK(c.r), suit: t('suit' + c.s) }))}">` +
       `<span class="tl">${RANK(c.r)}<i>${SUIT[c.s]}</i></span><span class="pip${face ? ' face' : ''}">${face ? RANK(c.r) : SUIT[c.s]}</span></${tag}>`;
@@ -124,6 +133,7 @@
   // ---------- login ----------
   async function renderLogin(err = '', mode) {
     if (es) { es.close(); es = null; }
+    shellKey = null; lastRoute = null;
     const pub = await fetch('/api/public').then(r => r.json()).catch(() => ({}));
     if (!pub.signupOpen) mode = 'in';
     mode = mode || 'in';
@@ -156,18 +166,34 @@
 
   // ---------- shell ----------
   const route = () => (location.hash.slice(1) || 'play');
+  let shellKey = null;
   function render() {
     if (!S) return;
     const r = route();
-    const links = ['play', 'stats', 'history', 'settings']
-      .map(k => `<a href="#${k}"${r === k ? ' aria-current="page"' : ''}>${esc(t(k))}</a>`).join('');
-    app.innerHTML = `<header class="top">
-      <a class="brand" href="#play"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 8l6 10 11-3-3 11 10 6-10 6 3 11-11-3-6 10-6-10-11 3 3-11-10-6 10-6-3-11 11 3z"/></svg>Rami</a>
-      <nav>${links}</nav>
-      <span class="who">${langSelect('topLang')} ${esc(S.me.name)} <button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
-    $('#out').addEventListener('click', async () => { await call('/api/logout', {}).catch(() => {}); S = null; renderLogin(); });
-    $('#topLang').addEventListener('change', e => { setLang(e.target.value, true); render(); });
+    // Rebuild the header only when something in it changes, so the table can animate between updates.
+    const key = `${lang}|${r}|${S.me.name}`;
+    if (key !== shellKey || !$('#main')) {
+      shellKey = key;
+      const icons = {
+        play: '<path d="M7 4h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm12 3.5 1.6.5a2 2 0 0 1 1.3 2.5l-3 9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+        stats: '<path d="M5 20V11M12 20V4M19 20v-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+        history: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+        settings: '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      };
+      const links = ['play', 'stats', 'history', 'settings']
+        .map(k => `<a href="#${k}"${r === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icons[k]}</svg><span>${esc(t(k))}</span></a>`).join('');
+      app.innerHTML = `<header class="top">
+        <a class="brand" href="#play"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 8l6 10 11-3-3 11 10 6-10 6 3 11-11-3-6 10-6-10-11 3 3-11-10-6 10-6-3-11 11 3z"/></svg>Rami</a>
+        <nav class="tabs">${links}</nav>
+        <span class="who">${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
+      $('#out').addEventListener('click', async () => { await call('/api/logout', {}).catch(() => {}); S = null; shellKey = null; renderLogin(); });
+      $('#topLang').addEventListener('change', e => { setLang(e.target.value, true); render(); });
+    }
     ({ play: renderPlay, stats: renderStats, history: renderHistory, settings: renderSettings }[r] || renderPlay)();
+    if (r !== lastRoute) {
+      const m = $('#main'); m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter');
+      lastRoute = r;
+    }
 
     const g = S.game, mine = !!(g && !g.result && g.turn === me());
     document.title = mine ? '● Rami' : 'Rami';
@@ -218,36 +244,117 @@
 
   function rulesSummary(r) {
     return [t('rJokers', { n: r.jokers }), t('rCards', { n: r.handSize }), t('rMelds', { n: r.minMeld }),
-      r.requireSwivi && r.requireTirci ? t('rBoth') : r.requireSwivi ? t('rSwivi') : r.requireTirci ? t('rTirci') : t('rAny'),
+      t('rNeed', { s: r.minSwivi ?? 1, t: r.minTirci ?? 1 }),
       r.aceLow && r.aceHigh ? t('rAceBoth') : r.aceHigh ? t('rAceHigh') : t('rAceLow')].join(' · ');
   }
 
+  // ---------- joker choices (remembered in this browser, per game) ----------
+  function loadPins(no) {
+    if (pinsGame === no) return;
+    pinsGame = no;
+    try { pins = JSON.parse(localStorage.getItem('rami-pins-' + no)) || {}; } catch { pins = {}; }
+  }
+  function savePins() { try { localStorage.setItem('rami-pins-' + pinsGame, JSON.stringify(pins)); } catch {} }
+
   // Splits the hand into what's shown: meld groups, loose cards, and the card just drawn.
   function layoutHand(g, over) {
+    loadPins(g.no);
     const hand = g.myHand || [];
     const myTurn = !over && g.turn === me();
     const drawn = myTurn && g.phase === 'discard' && g.lastDrawn && hand.includes(g.lastDrawn) ? g.lastDrawn : null;
     const base = hand.filter(id => id !== drawn);
     const grouped = S.me.prefs?.groupMelds !== false;
-    const { melds, loose } = grouped ? bestMelds(base, g.rules) : { melds: [], loose: base };
-    // keep melds in a stable order: by where their first card sits in the saved hand
-    melds.sort((a, b) => base.indexOf(a.cards[0]) - base.indexOf(b.cards[0]));
-    return { hand, drawn, base, grouped, melds, loose };
+    if (!grouped) return { hand, drawn, base, grouped, melds: [], loose: base, pool: base };
+
+    // the player's own joker choices go first
+    let pool = base.slice();
+    const pinned = [], kept = [];
+    for (const [jid, pin] of Object.entries(pins)) {
+      if (!pool.includes(jid)) continue;
+      if (pin === 'loose') { pool = pool.filter(x => x !== jid); kept.push(jid); continue; }
+      const cards = pin.cards.map(x => x === 'JOKER' ? jid : x);
+      if (!cards.every(x => pool.includes(x))) { delete pins[jid]; continue; }
+      pool = pool.filter(x => !cards.includes(x));
+      pinned.push({ type: pin.type, cards, pinned: true });
+    }
+    const auto = bestMelds(pool, g.rules);
+    auto.melds.sort((x, y) => base.indexOf(x.cards[0]) - base.indexOf(y.cards[0]));
+    const looseSet = new Set([...auto.loose, ...kept]);
+    return { hand, drawn, base, grouped, melds: [...pinned, ...auto.melds], loose: base.filter(x => looseSet.has(x)), pool };
   }
   // Card order to save after a change: melds first, then loose cards, then the new card.
   const fullOrder = (L, loose) => [...L.melds.flatMap(m => m.cards), ...loose, ...(L.drawn ? [L.drawn] : [])];
 
+  // What a card would do for the hand: a short sentence plus a small preview.
+  function potentialHTML(title, base, card, rules, gives) {
+    const p = cardPotential(base, card, rules);
+    let msg, preview = '';
+    if (gives) msg = t('potRami');
+    else if (p.meld && p.gain > 0) msg = t('potJoins', { type: t(p.meld.type), n: p.gain });
+    else if (p.meld) msg = t('potSame', { type: t(p.meld.type) });
+    else if (p.partners.length) msg = t('potPartner', { cards: p.partners.map(x => label(x.id)).join(', '), type: t(p.partners[0].type) });
+    else msg = t('potNothing');
+    if (p.meld) preview = `<div class="meld meld-${p.meld.type}">${p.meld.cards.map(c => cardHTML(c, 'mini' + (c === card ? ' hi' : ''))).join('')}</div>`;
+    else if (p.partners.length) preview = `<div class="meld">${[card, ...p.partners.map(x => x.id)].map(c => cardHTML(c, 'mini' + (c === card ? ' hi' : ''))).join('')}</div>`;
+    return `<div class="potential ${gives ? 'is-rami' : p.meld ? 'is-good' : p.partners.length ? 'is-some' : 'is-none'}">
+      <div class="pot-text"><b>${esc(title)}</b><span>${esc(msg)}</span></div>${preview}</div>`;
+  }
+
+  function jokerPanelHTML(L, g, jid) {
+    const others = L.pool.filter(x => x !== jid && parse(x).joker !== true);
+    const opts = jokerOptions(others, g.rules);
+    const cur = pins[jid];
+    const same = o => cur && cur !== 'loose' && cur.type === o.type && cur.cards.join() === o.cards.join();
+    const chip = (key, text, cardsHTML, active) => `<button class="chip${active ? ' on' : ''}" data-pin="${key}">${esc(text)}${cardsHTML ? `<span class="chip-cards">${cardsHTML}</span>` : ''}</button>`;
+    const list = opts.map((o, i) => chip(i, o.type === 'tirci' ? t('jokerTirci', { rank: RANK(o.stands.r) }) : t('jokerAs', { card: shortCard(o.stands) }),
+      o.cards.map(c => cardHTML(c === 'JOKER' ? jid : c, 'mini')).join(''), same(o))).join('');
+    return { html: `<div class="joker-panel"><b>${esc(t('jokerTitle'))}</b><div class="chips">
+      ${chip('auto', t('jokerAuto'), '', !cur)}${chip('loose', t('jokerLoose'), '', cur === 'loose')}${list}</div></div>`, opts };
+  }
+
+  // ---------- smooth card movement (FLIP: measure, change, play the difference) ----------
+  function snapshot() {
+    const m = new Map();
+    document.querySelectorAll('#hand [data-id], #pile [data-id]').forEach(el => m.set(el.dataset.id, el.getBoundingClientRect()));
+    const r = sel => document.querySelector(sel)?.getBoundingClientRect() || null;
+    return { m, deck: r('#deck .card'), opp: r('.backs'), no: S?.game?.no };
+  }
+  function flip(before) {
+    if (!before || reduceMotion() || !before.deck) return;
+    const fresh = [];
+    const sameGame = before.no === S.game?.no;
+    const ease = 'cubic-bezier(.2,.8,.2,1)';
+    document.querySelectorAll('#hand [data-id], #pile [data-id]').forEach(el => {
+      const r = el.getBoundingClientRect(), b = sameGame && before.m.get(el.dataset.id);
+      if (b) {
+        const dx = b.left - r.left, dy = b.top - r.top;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1)
+          el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 340, easing: ease });
+      } else fresh.push([el, r]);
+    });
+    const dealing = fresh.length > 3;
+    fresh.forEach(([el, r], i) => {
+      const from = el.closest('#pile') ? before.opp : before.deck;
+      if (!from) return;
+      const dx = from.left + from.width / 2 - (r.left + r.width / 2), dy = from.top + from.height / 2 - (r.top + r.height / 2);
+      el.animate([{ transform: `translate(${dx}px,${dy}px) scale(.85)`, opacity: .4 }, { transform: 'none', opacity: 1 }],
+        { duration: dealing ? 420 : 380, delay: dealing ? i * 40 : 0, easing: ease, fill: 'backwards' });
+    });
+  }
+
   function renderPlay() {
     const main = $('#main'); if (!main) return;
+    const before = main.querySelector('#hand') ? snapshot() : null;
     const g = S.game;
+    const banner = S.storage === 'file' ? `<div class="banner">${esc(t('storageWarn'))}</div>` : '';
     if (S.users.length < 2) {
-      main.innerHTML = `${scoreboard(null)}<div class="panel"><h2>${esc(t('waitingPartnerTitle'))}</h2><p>${esc(t('waitingPartnerBody'))}</p></div>`;
+      main.innerHTML = `${banner}${scoreboard(null)}<div class="panel"><h2>${esc(t('waitingPartnerTitle'))}</h2><p>${esc(t('waitingPartnerBody'))}</p></div>`;
       return;
     }
     if (!g || !g.players.includes(me())) {
-      main.innerHTML = `${scoreboard(null)}<div class="table"><div class="row center"><div class="status">${esc(t('noGame'))}
+      main.innerHTML = `${banner}${scoreboard(null)}<div class="table"><div class="row center"><div class="status">${esc(t('noGame'))}
         <span class="sub">${esc(rulesSummary(S.rules))}</span></div></div>
-        <div class="actions"><button class="btn primary big" id="deal">${esc(t('deal'))}</button></div></div>`;
+        <div class="actions"><button class="btn primary big" id="deal">${esc(t('deal'))}</button></div><div id="hand"></div></div>`;
       $('#deal').addEventListener('click', deal);
       return;
     }
@@ -265,14 +372,29 @@
     const placed = L.melds.reduce((n, m) => n + m.cards.length, 0);
     const cls = id => `${id === sel ? 'sel' : ''} ${winners.includes(id) && sel !== id ? 'win-throw' : ''}`;
 
-    const meldGroups = L.melds.map(m => `<div class="group meld-${m.type}"><span class="group-label">${esc(t(m.type))}</span>
-      <div class="group-cards">${m.cards.map(id => cardHTML(id, cls(id), 'button')).join('')}</div></div>`).join('');
+    // What the new card (or the card on the pile) would do for you
+    let potential = '';
+    if (!over && canDiscard && L.drawn)
+      potential = potentialHTML(t('potTitle', { card: label(L.drawn) }), L.base, L.drawn, g.rules, winners.some(x => x !== L.drawn));
+    else if (!over && canPickup) {
+      const withTop = [...L.hand, g.discardTop];
+      const gives = L.hand.some(x => findRami(withTop.filter(y => y !== x), g.rules));
+      potential = potentialHTML(t('potPreview', { card: label(g.discardTop) }), L.base, g.discardTop, g.rules, gives);
+    }
+
+    const groupHTML = m => `<div class="group meld-${m.type}${m.pinned ? ' pinned' : ''}"><span class="group-label">${esc(t(m.type))}${m.pinned ? ` · ${esc(t('pinned'))}` : ''}</span>
+      <div class="group-cards">${m.cards.map((id, i) => {
+        const as = parse(id).joker ? jokerStandsFor(m, i) : null;
+        return cardHTML(id, cls(id), 'button', as ? (m.type === 'tirci' ? t('anyRank', { rank: RANK(as.r) }) : shortCard(as)) : '');
+      }).join('')}</div></div>`;
+    const meldGroups = L.melds.map(groupHTML).join('');
     const looseGroup = L.loose.length ? `<div class="group loose">${L.grouped ? `<span class="group-label">${esc(t('loose'))}</span>` : ''}
       <div class="group-cards">${L.loose.map(id => cardHTML(id, cls(id), 'button')).join('')}</div></div>` : '';
     const drawnSlot = L.drawn ? `<div class="group drawn"><span class="group-label">${esc(t('newCard'))}</span>
       <div class="group-cards">${cardHTML(L.drawn, cls(L.drawn), 'button')}</div></div>` : '';
+    const jp = sel && L.grouped && !over && parse(sel).joker && sel !== L.drawn ? jokerPanelHTML(L, g, sel) : null;
 
-    main.innerHTML = `${scoreboard(g)}<div class="layout"><div>
+    main.innerHTML = `${banner}${scoreboard(g)}<div class="layout"><div>
       <div class="table">
         <div class="row opp"><div class="opp-name">${esc(nameOf(oppId))} <span class="badge">${esc(t('cardsN', { n: g.counts[oppId] }))}</span></div>
           <div class="backs">${over ? '' : Array.from({ length: Math.min(g.counts[oppId], 16) }, back).join('')}</div></div>
@@ -281,10 +403,12 @@
           <div class="status">${over ? `<b>${g.winner === me() ? esc(t('youWon')) : esc(t('xWon', { name: nameOf(g.winner) }))}</b>` : statusText(g, oppId)}</div>
           <button class="pile ${canPickup ? 'can' : ''}" id="pile" ${canPickup ? '' : 'disabled'} aria-label="${esc(t('discard'))}">${cardHTML(g.discardTop)}<small>${esc(t('discard'))} · ${g.discardCount}</small></button>
         </div>
+        ${potential}
         <div class="hand-wrap">
           ${L.grouped && !over ? `<p class="meld-summary">${esc(t('meldsSummary', { m: L.melds.length, c: placed, n: L.base.length }))}</p>` : ''}
           ${winners.length ? `<p class="rami-ready">${esc(t('haveRami'))}</p>` : ''}
           <div class="hand" id="hand">${meldGroups}${looseGroup}${drawnSlot}</div>
+          ${jp ? jp.html : ''}
           ${over ? '' : `<div class="actions">
             <button class="btn" id="sortSuit">${esc(t('sortSuit'))}</button>
             <button class="btn" id="sortRank">${esc(t('sortRank'))}</button>
@@ -295,9 +419,10 @@
       </div>
       ${over ? resultPanel(g, oppId) : ''}
     </div>
-    <aside class="log"><h3>${esc(t('gameN', { n: g.no }))}</h3><ol>${[...g.log].reverse().map(e => `<li>${logLine(e)}</li>`).join('')}</ol>
-      ${over ? '' : `<p><button class="btn danger" id="resign">${esc(t('resign'))}</button></p>`}<p class="hint">${esc(rulesSummary(g.rules))}</p></aside></div>`;
+    <details class="log" ${window.innerWidth > 900 ? 'open' : ''}><summary><h3>${esc(t('gameN', { n: g.no }))} · ${esc(t('moves'))}</h3></summary><ol>${[...g.log].reverse().map(e => `<li>${logLine(e)}</li>`).join('')}</ol>
+      ${over ? '' : `<p><button class="btn danger" id="resign">${esc(t('resign'))}</button></p>`}<p class="hint">${esc(rulesSummary(g.rules))}</p></details></div>`;
 
+    flip(before);
     $('#deck').addEventListener('click', () => move({ type: 'draw', source: 'deck' }));
     $('#pile').addEventListener('click', () => move({ type: 'draw', source: 'discard' }));
     if (over) { $('#again')?.addEventListener('click', deal); return; }
@@ -306,6 +431,13 @@
     $('#sortRank').addEventListener('click', () => sendOrder(fullOrder(L, sortCards(L.loose, 'rank'))));
     $('#discard').addEventListener('click', () => move({ type: 'discard', card: sel }));
     $('#declare').addEventListener('click', () => move({ type: 'declare', card: sel }));
+    if (jp) main.querySelectorAll('.joker-panel .chip').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.pin;
+      if (k === 'auto') delete pins[sel];
+      else if (k === 'loose') pins[sel] = 'loose';
+      else { const o = jp.opts[+k]; pins[sel] = { type: o.type, cards: o.cards }; }
+      savePins(); sel = null; renderPlay();
+    }));
     bindHand(L);
   }
 
@@ -396,8 +528,8 @@
         ${field('jokersL', 'jokersS', num('jokers', 0, 4))}
         ${field('dealtL', 'dealtS', num('handSize', 7, 20))}
         ${field('smallestMeld', '', opt('minMeld', String(r.minMeld), [['3', t('cards3')], ['4', t('cards4')]]))}
-        ${field('mustSwivi', 'swiviS', chk('requireSwivi', r.requireSwivi))}
-        ${field('mustTirci', 'tirciS', chk('requireTirci', r.requireTirci))}
+        ${field('needSwivi', 'swiviS', num('minSwivi', 0, 4))}
+        ${field('needTirci', 'tirciS', num('minTirci', 0, 4))}
         ${field('aceLowL', '', chk('aceLow', r.aceLow))}
         ${field('aceHighL', '', chk('aceHigh', r.aceHigh))}
         ${field('jokersPerMeld', '', num('maxJokersPerMeld', 0, 4))}
@@ -406,18 +538,19 @@
         <button class="btn primary">${esc(t('saveRules'))}</button></form>
       <form class="panel settings" id="prefs"><h2>${esc(t('yourLook'))}</h2><p class="hint">${esc(t('lookHint'))}</p>
         ${field('language', '', opt('lang', lang, LANGS.map(l => [l, self.RamiI18n[l].langName])))}
-        <div class="field"><label>${esc(t('tableColour'))}</label><div class="swatches">${FELTS.map((c, i) => `<button type="button" class="swatch sw-${i}" data-c="${c}" aria-label="${esc(t('colourN', { n: i + 1 }))}" aria-pressed="${(p.felt || FELTS[0]) === c}"></button>`).join('')}<input type="color" name="felt" value="${p.felt || FELTS[0]}" aria-label="${esc(t('customColour'))}"></div></div>
+        <div class="field wide"><label>${esc(t('tableColour'))}</label><div class="swatches">${FELTS.map((c, i) => `<button type="button" class="swatch sw-${i}" data-c="${c}" aria-label="${esc(t('colourN', { n: i + 1 }))}" aria-pressed="${(p.felt || FELTS[0]) === c}"></button>`).join('')}<input type="color" name="felt" value="${p.felt || FELTS[0]}" aria-label="${esc(t('customColour'))}"></div></div>
         ${field('groupMelds', 'groupMeldsS', `<input type="checkbox" name="groupMelds" ${p.groupMelds !== false ? 'checked' : ''}>`)}
         ${field('suitColours', 'suitColoursS', opt('deckColors', p.deckColors || 'classic', [['classic', t('redBlack')], ['four', t('fourColours')]]))}
         ${field('cardSize', '', opt('cardSize', p.cardSize || 'm', [['s', t('small')], ['m', t('medium')], ['l', t('large')]]))}
         ${field('theme', '', opt('theme', p.theme || 'auto', [['auto', t('matchDevice')], ['light', t('light')], ['dark', t('dark')]]))}
         ${field('sound', '', `<input type="checkbox" name="sound" ${p.sound ? 'checked' : ''}>`)}
-        <button class="btn primary">${esc(t('saveLook'))}</button></form></div>`;
+        <button class="btn primary">${esc(t('saveLook'))}</button>
+        <p class="storage ${S.storage}">${esc(t('storageL'))}: <b>${esc(S.storage === 'mongodb' ? t('storageMongo') : t('storageFile'))}</b></p></form></div>`;
 
     $('#rules').addEventListener('submit', async e => {
       e.preventDefault(); const f = e.target;
       const rules = { jokers: +f.jokers.value, handSize: +f.handSize.value, minMeld: +f.minMeld.value, maxJokersPerMeld: +f.maxJokersPerMeld.value,
-        requireSwivi: f.requireSwivi.checked, requireTirci: f.requireTirci.checked, aceLow: f.aceLow.checked, aceHigh: f.aceHigh.checked,
+        minSwivi: +f.minSwivi.value, minTirci: +f.minTirci.value, aceLow: f.aceLow.checked, aceHigh: f.aceHigh.checked,
         allowDiscardPickup: f.allowDiscardPickup.checked, starter: f.starter.value };
       if (!rules.aceLow && !rules.aceHigh) return toast(t('aceNeeded'));
       try { await call('/api/rules', { rules }); toast(t('rulesSaved')); refresh(); } catch (x) { toast(x.message); }

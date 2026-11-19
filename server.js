@@ -108,6 +108,7 @@ function stateFor(u) {
     rules: db.rules,
     game: game.view(db.game, u.id),
     stats: stats(),
+    storage: mongoUri() ? 'mongodb' : 'file',
     history: db.history.slice(-100).reverse().map(h => ({ ...h, loserHand: undefined })),
     version,
   };
@@ -281,7 +282,9 @@ async function start() {
     }
   });
   server.listen(PORT, HOST, () => {
-    console.log(`Rami running on http://${HOST}:${PORT} (${mongoUri() ? 'MongoDB' : 'local file storage'})`);
+    console.log(`Rami running on http://${HOST}:${PORT}`);
+    if (mongoUri()) console.log(`Storage: MongoDB, database "${store.dbName}". Accounts and games survive redeploys.`);
+    else console.log('WARNING: no mongoURI set. Saving to a local file, which is wiped when the container is rebuilt (every deploy).');
   });
   const stop = async () => { server.close(); await queue; await store.close(); process.exit(0); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);

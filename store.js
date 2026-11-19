@@ -45,7 +45,7 @@ class MongoStore {
     for (const s of await this.sessions.find({ expiresAt: { $gt: new Date() } }).toArray())
       state.sessions[s._id] = { uid: s.uid, exp: s.expiresAt.getTime() };
     const rules = await this.settings.findOne({ _id: 'rules' });
-    if (rules) { const { _id, ...r } = rules; state.rules = { ...state.rules, ...r }; }
+    if (rules) { const { _id, requireSwivi, requireTirci, ...r } = rules; state.rules = { ...state.rules, ...r }; }
     const games = await this.games.find().sort({ _id: 1 }).toArray();
     for (const doc of games) {
       const { _id, ...g } = doc;
@@ -73,7 +73,7 @@ class FileStore {
     catch (e) { if (e.code !== 'ENOENT') throw e; this.data = empty; }
     const d = this.data, nos = Object.keys(d.games).map(Number).sort((a, b) => a - b);
     return {
-      users: d.users, sessions: d.sessions, rules: { ...defaultRules, ...d.rules },
+      users: d.users, sessions: d.sessions, rules: (({ requireSwivi, requireTirci, ...r }) => ({ ...defaultRules, ...r }))(d.rules || {}),
       game: nos.length ? d.games[nos[nos.length - 1]] : null,
       history: nos.map(n => d.games[n]).filter(g => g.result).map(summary),
       nextGameNo: (nos[nos.length - 1] || 0) + 1,
@@ -93,9 +93,15 @@ class FileStore {
   async close() {}
 }
 
-// Accepts MONGODB_URI, mongoURI or MONGO_URI. The database name comes from MONGODB_DB,
+// Accepts mongoURI, MONGODB_URI, MONGO_URI, MONGO_URL (or a mongodb:// DATABASE_URL). The database name comes from MONGODB_DB,
 // then the name in the connection string (…mongodb.net/rami), then "rami".
-const mongoUri = () => process.env.MONGODB_URI || process.env.mongoURI || process.env.MONGO_URI;
+const mongoUri = () => {
+  const e = process.env;
+  const v = e.MONGODB_URI || e.mongoURI || e.MONGO_URI || e.MONGODB_URL || e.MONGO_URL || e.mongoUri || e.MONGOURI;
+  if (v) return v.trim();
+  if (/^mongodb(\+srv)?:\/\//.test(e.DATABASE_URL || '')) return e.DATABASE_URL.trim();
+  return null;
+};
 function dbNameFrom(uri) {
   const m = /^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]+)/.exec(uri);
   return m ? decodeURIComponent(m[1]) : null;

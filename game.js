@@ -12,8 +12,8 @@ const DEFAULT_RULES = {
   jokers: 4,              // 0-4 jokers in the two decks
   handSize: 14,           // cards each; the starter gets one extra
   minMeld: 3,             // smallest swivi / tirci
-  requireSwivi: true,     // winning hand must contain at least one swivi
-  requireTirci: true,     // ...and at least one tirci
+  minSwivi: 2,            // swivis a winning hand needs (same suit, in a row)
+  minTirci: 2,            // tircis a winning hand needs (same number, different suits)
   aceLow: true,           // A-2-3
   aceHigh: true,          // Q-K-A
   maxJokersPerMeld: 4,    // limit jokers inside one meld
@@ -29,7 +29,9 @@ function cleanRules(input) {
   r.handSize = int(input.handSize, 7, 20, r.handSize);
   r.minMeld = int(input.minMeld, 3, 4, r.minMeld);
   r.maxJokersPerMeld = int(input.maxJokersPerMeld, 0, 4, r.maxJokersPerMeld);
-  for (const k of ['requireSwivi', 'requireTirci', 'aceLow', 'aceHigh', 'allowDiscardPickup'])
+  r.minSwivi = int(input.minSwivi, 0, 4, r.minSwivi);
+  r.minTirci = int(input.minTirci, 0, 4, r.minTirci);
+  for (const k of ['aceLow', 'aceHigh', 'allowDiscardPickup'])
     if (typeof input[k] === 'boolean') r[k] = input[k];
   if (['alternate', 'loser', 'winner'].includes(input.starter)) r.starter = input.starter;
   return r;
@@ -72,6 +74,7 @@ function err(code, message) { const e = new Error(message); e.code = code; retur
 const other = (g, id) => g.players.find(p => p !== id);
 
 function apply(g, uid, move) {
+  if (g.rules.minSwivi === undefined) { g.rules.minSwivi = g.rules.requireSwivi === false ? 0 : 1; g.rules.minTirci = g.rules.requireTirci === false ? 0 : 1; }
   if (g.winner || g.result) throw err('over', 'This game is over.');
   if (!g.players.includes(uid)) throw err('notInGame', 'You are not in this game.');
   const hand = g.hands[uid];
@@ -122,8 +125,7 @@ function apply(g, uid, move) {
     if (move.type === 'declare') {
       const melds = findRami(rest, g.rules);
       if (!melds) {
-        const need = [g.rules.requireSwivi && 'a swivi', g.rules.requireTirci && 'a tirci'].filter(Boolean);
-        throw err('notRami', `Not a Rami yet. Every card except your discard has to be in a meld${need.length ? `, including ${need.join(' and ')}` : ''}.`);
+        throw err('notRami', `Not a Rami yet. Every card except your discard has to be in a meld, with at least ${g.rules.minSwivi} swivi and ${g.rules.minTirci} tirci.`);
       }
       g.hands[uid] = rest; g.discard.push(move.card);
       g.winner = uid; g.result = 'rami'; g.endedAt = Date.now(); g.melds = melds;
@@ -143,6 +145,7 @@ function apply(g, uid, move) {
 // What one player is allowed to see.
 function view(g, uid) {
   if (!g) return null;
+  if (g.rules.minSwivi === undefined) { g.rules.minSwivi = g.rules.requireSwivi === false ? 0 : 1; g.rules.minTirci = g.rules.requireTirci === false ? 0 : 1; }
   const over = !!(g.winner || g.result);
   const opp = other(g, uid);
   return {
