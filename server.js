@@ -125,6 +125,7 @@ function cleanPrefs(p) {
   if (['en', 'ar', 'fr'].includes(p.lang)) out.lang = p.lang;
   if (typeof p.groupMelds === 'boolean') out.groupMelds = p.groupMelds;
   if (['suit', 'rank'].includes(p.sortBy)) out.sortBy = p.sortBy;
+  if (typeof p.zlayji === 'boolean') out.zlayji = p.zlayji;
   return out;
 }
 

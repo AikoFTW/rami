@@ -118,24 +118,61 @@
     root.style.setProperty('--felt', p.felt || FELTS[0]);
     if (p.theme && p.theme !== 'auto') root.dataset.theme = p.theme; else delete root.dataset.theme;
     document.body.classList.toggle('four', p.deckColors === 'four');
+    document.body.classList.toggle('zlayji', !!p.zlayji);
     document.body.classList.remove('card-s', 'card-l');
     if (p.cardSize === 's') document.body.classList.add('card-s');
     if (p.cardSize === 'l') document.body.classList.add('card-l');
   }
 
-  function chime() {
-    if (!S?.me.prefs?.sound) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [660, 880].forEach((f, i) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
-        const at = ctx.currentTime + i * 0.14;
-        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.2, at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
-        o.start(at); o.stop(at + 0.32);
-      });
-    } catch {}
-  }
+  // ---------- sound effects (made in the browser, no files) ----------
+  const soundOn = () => S?.me.prefs?.sound !== false;
+  const sfx = (() => {
+    let ctx = null, noise = null, master = null;
+    function get() {
+      if (!ctx) {
+        try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+        master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+        noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    }
+    // browsers only allow sound after the first tap, so wake the audio up then
+    ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => get(), { once: true, passive: true }));
+    // a filtered burst of noise: the swish of a card
+    function swish(at, { dur = .12, from = 2600, to = 1200, q = 1.2, vol = .22, type = 'bandpass' } = {}) {
+      const c = get(); if (!c) return;
+      const src = c.createBufferSource(); src.buffer = noise;
+      const f = c.createBiquadFilter(); f.type = type; f.Q.value = q;
+      f.frequency.setValueAtTime(from, at); f.frequency.exponentialRampToValueAtTime(to, at + dur);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + .012); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(at, Math.random() * .5); src.stop(at + dur + .02);
+    }
+    function tone(at, freq, { dur = .25, vol = .14, type = 'sine' } = {}) {
+      const c = get(); if (!c) return;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, at);
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + .015); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      o.connect(g); g.connect(master); o.start(at); o.stop(at + dur + .02);
+    }
+    const now = () => (get()?.currentTime || 0) + .01;
+    const play = fn => { if (!soundOn() || !get() || ctx.state !== 'running') return; try { fn(now()); } catch {} };
+    return {
+      tap: () => play(t0 => swish(t0, { dur: .04, from: 4200, to: 3000, vol: .07, type: 'highpass' })),
+      flip: (delay = 0) => play(t0 => { const t = t0 + delay; swish(t, { dur: .09, from: 3400, to: 1800, vol: .18 }); swish(t + .07, { dur: .05, from: 5200, to: 4000, vol: .12, type: 'highpass' }); }),
+      slide: (delay = 0, vol = .2) => play(t0 => swish(t0 + delay, { dur: .2, from: 1800, to: 700, q: .8, vol })),
+      throw: (delay = 0) => play(t0 => { const t = t0 + delay; swish(t, { dur: .18, from: 2200, to: 900, q: .9, vol: .2 }); swish(t + .3, { dur: .07, from: 500, to: 200, q: .7, vol: .3, type: 'lowpass' }); }),
+      shuffle: () => play(t0 => { for (let i = 0; i < 14; i++) swish(t0 + i * .045 + Math.random() * .02, { dur: .05, from: 3800, to: 2600, vol: .1 + Math.random() * .06 }); }),
+      deal: n => play(t0 => { for (let i = 0; i < n; i++) swish(t0 + .7 + i * .055, { dur: .06, from: 3000, to: 1900, vol: .12 }); }),
+      turn: () => play(t0 => { tone(t0 + .35, 660, { dur: .3, vol: .12 }); tone(t0 + .49, 880, { dur: .35, vol: .12 }); }),
+      win: () => play(t0 => [523, 659, 784, 1047, 1319].forEach((f, i) => { tone(t0 + i * .09, f, { dur: .45, vol: .11, type: 'triangle' }); tone(t0 + i * .09, f * 2, { dur: .2, vol: .03 }); })),
+      lose: () => play(t0 => { tone(t0, 440, { dur: .4, vol: .1, type: 'triangle' }); tone(t0 + .22, 330, { dur: .55, vol: .1, type: 'triangle' }); }),
+      test: () => { get(); setTimeout(() => play(t0 => { swish(t0, { dur: .09, from: 3400, to: 1800, vol: .18 }); tone(t0 + .15, 660, { dur: .3, vol: .12 }); tone(t0 + .29, 880, { dur: .35, vol: .12 }); }), 50); },
+    };
+  })();
 
   // ---------- login ----------
   async function renderLogin(err = '', mode) {
@@ -173,12 +210,34 @@
 
   // ---------- shell ----------
   const route = () => (location.hash.slice(1) || 'play');
+  // Moroccan flag: red field, green five-pointed star outline
+  const FLAG = '<svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" rx="2.5" fill="#c1272d"/><path d="M15 5.2l2.2 6.9-5.8-4.3h7.2l-5.8 4.3z" fill="none" stroke="#006233" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+  function setZlayji(on) {
+    // only this one switch changes; your own colours, sizes and theme stay saved underneath
+    S.me.prefs = { ...S.me.prefs, zlayji: on };
+    applyPrefs(); shellKey = null; render();
+    if (on) { toast(t('zlayjiOn')); if (!reduceMotion()) celebrateFlag(); }
+    call('/api/prefs', { prefs: { zlayji: on } }).catch(() => {});
+  }
+  function celebrateFlag() {
+    const btn = document.querySelector('#zlayji')?.getBoundingClientRect(); if (!btn) return;
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('span');
+      p.className = 'spark ' + (i % 2 ? 'zl-red' : 'zl-green'); p.textContent = '★';
+      Object.assign(p.style, { left: btn.left + btn.width / 2 + 'px', top: btn.top + btn.height / 2 + 'px' });
+      document.body.appendChild(p);
+      const x = (Math.random() - .5) * 260, y = 60 + Math.random() * 220;
+      const a = p.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 }, { transform: `translate(-50%,-50%) translate(${x * .6}px,${y * .4}px) scale(1.2) rotate(120deg)`, opacity: 1, offset: .4 },
+        { transform: `translate(-50%,-50%) translate(${x}px,${y}px) scale(.7) rotate(260deg)`, opacity: 0 }], { duration: 1100 + Math.random() * 400, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'both' });
+      a.onfinish = a.oncancel = () => p.remove();
+    }
+  }
   let shellKey = null;
   function render() {
     if (!S) return;
     const r = route();
     // Rebuild the header only when something in it changes, so the table can animate between updates.
-    const key = `${lang}|${r}|${S.me.name}`;
+    const key = `${lang}|${r}|${S.me.name}|${!!S.me.prefs?.zlayji}`;
     if (key !== shellKey || !$('#main')) {
       shellKey = key;
       const icons = {
@@ -192,9 +251,10 @@
       app.innerHTML = `<header class="top">
         <a class="brand" href="#play"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 8l6 10 11-3-3 11 10 6-10 6 3 11-11-3-6 10-6-10-11 3 3-11-10-6 10-6-3-11 11 3z"/></svg>Rami</a>
         <nav class="tabs">${links}</nav>
-        <span class="who">${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
+        <span class="who"><button id="zlayji" class="zl-btn" aria-pressed="${!!S.me.prefs?.zlayji}" title="${esc(t('zlayji'))}" aria-label="${esc(t('zlayji'))}">${FLAG}</button>${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
       $('#out').addEventListener('click', async () => { await call('/api/logout', {}).catch(() => {}); S = null; shellKey = null; renderLogin(); });
       $('#topLang').addEventListener('change', e => { setLang(e.target.value, true); render(); });
+      $('#zlayji').addEventListener('click', () => setZlayji(!S.me.prefs?.zlayji));
     }
     ({ play: renderPlay, stats: renderStats, history: renderHistory, settings: renderSettings }[r] || renderPlay)();
     if (r !== lastRoute) {
@@ -204,7 +264,6 @@
 
     const g = S.game, mine = !!(g && !g.result && g.turn === me());
     document.title = mine ? '● Rami' : 'Rami';
-    if (mine && !wasMyTurn) chime();
     wasMyTurn = mine;
   }
 
@@ -387,10 +446,11 @@
   // A short burst of suit symbols when someone wins.
   function celebrate(won) {
     const box = document.querySelector('.table')?.getBoundingClientRect(); if (!box) return;
-    const n = won ? 28 : 10, sym = ['♠', '♥', '♦', '♣', '★'];
+    const zl = document.body.classList.contains('zlayji');
+    const n = won ? (zl ? 36 : 28) : 10, sym = zl ? ['★', '★', '♥', '★', '♦'] : ['♠', '♥', '♦', '♣', '★'];
     for (let i = 0; i < n; i++) {
       const p = document.createElement('span');
-      p.className = 'spark s' + (i % 5);
+      p.className = 'spark ' + (zl ? (i % 2 ? 'zl-red' : 'zl-green') : 's' + (i % 5));
       p.textContent = sym[i % 5];
       Object.assign(p.style, { left: box.left + box.width / 2 + 'px', top: box.top + box.height * .35 + 'px' });
       document.body.appendChild(p);
@@ -409,8 +469,20 @@
     const g = S.game;
     if (!g) return;
     const oppId = g.players.find(p => p !== me());
-    const now = { no: g.no, oppCount: g.counts[oppId], over: !!g.result, mine: !g.result && g.turn === me(), top: g.discardTop };
+    const now = { no: g.no, oppCount: g.counts[oppId], myCount: (g.myHand || []).length, over: !!g.result, mine: !g.result && g.turn === me(), top: g.discardTop };
     const prev = seen; seen = now;
+    if (prev) {
+      const same = prev.no === now.no;
+      if (!same) { sfx.shuffle(); sfx.deal(Math.min(now.myCount, 15)); }
+      else if (now.over && !prev.over) (g.winner === me() ? sfx.win : sfx.lose)();
+      else {
+        if (now.myCount > prev.myCount) sfx.flip();                                   // you drew
+        if (now.top !== prev.top && now.myCount < prev.myCount) sfx.throw();          // you threw
+        if (now.oppCount > prev.oppCount) sfx.slide(0, .14);                          // she drew
+        if (now.top !== prev.top && now.oppCount < prev.oppCount) sfx.throw();        // she threw
+        if (now.mine && !prev.mine) sfx.turn();                                       // your turn
+      }
+    }
     if (!before || reduceMotion() || !before.deck || !prev) return;
     const sameGame = prev.no === now.no;
     const fresh = [];
@@ -543,7 +615,7 @@
   // Tapping a card selects it (tap again to unselect). The hand sorts itself.
   function bindHand() {
     $('#hand').querySelectorAll('.card').forEach(c => c.addEventListener('click', () => {
-      sel = sel === c.dataset.id ? null : c.dataset.id; renderPlay();
+      sel = sel === c.dataset.id ? null : c.dataset.id; sfx.tap(); renderPlay();
     }));
   }
   function setSort(by) {
@@ -639,11 +711,12 @@
       <form class="panel settings" id="prefs"><h2>${esc(t('yourLook'))}</h2><p class="hint">${esc(t('lookHint'))}</p>
         ${field('language', '', opt('lang', lang, LANGS.map(l => [l, self.RamiI18n[l].langName])))}
         <div class="field wide"><label>${esc(t('tableColour'))}</label><div class="swatches">${FELTS.map((c, i) => `<button type="button" class="swatch sw-${i}" data-c="${c}" aria-label="${esc(t('colourN', { n: i + 1 }))}" aria-pressed="${(p.felt || FELTS[0]) === c}"></button>`).join('')}<input type="color" name="felt" value="${p.felt || FELTS[0]}" aria-label="${esc(t('customColour'))}"></div></div>
+        ${field('zlayji', 'zlayjiS', `<input type="checkbox" name="zlayji" ${p.zlayji ? 'checked' : ''}>`)}
         ${field('groupMelds', 'groupMeldsS', `<input type="checkbox" name="groupMelds" ${p.groupMelds !== false ? 'checked' : ''}>`)}
         ${field('suitColours', 'suitColoursS', opt('deckColors', p.deckColors || 'classic', [['classic', t('redBlack')], ['four', t('fourColours')]]))}
         ${field('cardSize', '', opt('cardSize', p.cardSize || 'm', [['s', t('small')], ['m', t('medium')], ['l', t('large')]]))}
         ${field('theme', '', opt('theme', p.theme || 'auto', [['auto', t('matchDevice')], ['light', t('light')], ['dark', t('dark')]]))}
-        ${field('sound', '', `<input type="checkbox" name="sound" ${p.sound ? 'checked' : ''}>`)}
+        ${field('sound', '', `<input type="checkbox" name="sound" ${p.sound !== false ? 'checked' : ''}>`)}
         <button class="btn primary">${esc(t('saveLook'))}</button>
         <p class="storage ${S.storage}">${esc(t('storageL'))}: <b>${esc(S.storage === 'mongodb' ? t('storageMongo') : t('storageFile'))}</b></p></form></div>`;
 
@@ -664,8 +737,8 @@
     pf.addEventListener('submit', async e => {
       e.preventDefault();
       const prefs = { lang: pf.lang.value, felt: pf.felt.value, deckColors: pf.deckColors.value, cardSize: pf.cardSize.value,
-        theme: pf.theme.value, sound: pf.sound.checked, groupMelds: pf.groupMelds.checked };
-      try { await call('/api/prefs', { prefs }); setLang(prefs.lang); toast(t('saved')); if (prefs.sound) chime(); refresh(); } catch (x) { toast(x.message); }
+        theme: pf.theme.value, sound: pf.sound.checked, groupMelds: pf.groupMelds.checked, zlayji: pf.zlayji.checked };
+      try { await call('/api/prefs', { prefs }); setLang(prefs.lang); toast(t('saved')); if (prefs.sound) sfx.test(); refresh(); } catch (x) { toast(x.message); }
     });
   }
 

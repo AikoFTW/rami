@@ -444,3 +444,38 @@ select.lang { color: #f6efe2 }
   .result .meld { position: relative; padding-top: 27px }
   .result .meld-label { top: 4px; inset-inline-start: 8px; transform: none }
 }
+
+
+/* ---------- Zlayji mode: Moroccan red and green, zellige everywhere ---------- */
+/* Overrides live on <body> only, so turning it off brings back your own saved look untouched. */
+body.zlayji { --felt: #9b1c22; --felt-2: #5e0f14; --saffron: #e8b23a; --zl-green: #006233; --zl-red: #c1272d }
+body.zlayji .top { background: var(--zl-green); box-shadow: inset 0 -4px 0 var(--zl-red) }
+body.zlayji .tabs { background: transparent }
+@media (max-width: 720px) { body.zlayji .tabs { background: var(--zl-green); box-shadow: 0 -4px 0 var(--zl-red), 0 -6px 20px rgba(0,0,0,.25) } }
+body.zlayji .table { background: radial-gradient(ellipse at 50% 40%, #c4262e, #9b1c22 55%, #5e0f14);
+  box-shadow: inset 0 0 0 6px var(--zl-green), inset 0 0 0 9px var(--saffron), inset 0 0 0 14px var(--zl-green), 0 18px 40px -20px rgba(0,0,0,.6) }
+body.zlayji .table::before { inset: 14px; opacity: .55; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50.0 10.0 L74.7 86.0 L10.1 39.0 L89.9 39.0 L25.3 86.0 Z' fill='none' stroke='%230a7a42' stroke-width='3.4' stroke-linejoin='round'/%3E%3C/svg%3E") center 38% / min(70%, 420px) no-repeat }
+body.zlayji .table::after { content: ''; position: absolute; left: 14px; right: 14px; top: 14px; height: 10px; border-radius: 6px 6px 0 0; opacity: .9;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23c1272d'/%3E%3Cpath d='M8 1 L10 6 L15 8 L10 10 L8 15 L6 10 L1 8 L6 6 Z' fill='%23006233' stroke='%23e8b23a' stroke-width='.5'/%3E%3C/svg%3E") 0 0 / 10px 10px repeat-x; pointer-events: none }
+body.zlayji .card.back, body.zlayji .card.flipping::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23006233'/%3E%3Cg fill='%23f6efe2' stroke='%23e8b23a' stroke-width='.6'%3E%3Crect x='6.5' y='6.5' width='11' height='11'/%3E%3Crect x='6.5' y='6.5' width='11' height='11' transform='rotate%2845 12 12%29'/%3E%3C/g%3E%3Crect x='9.6' y='9.6' width='4.8' height='4.8' transform='rotate%2845 12 12%29' fill='%23c1272d'/%3E%3Cg fill='%23c1272d'%3E%3Ccircle cx='0' cy='0' r='2.2'/%3E%3Ccircle cx='24' cy='0' r='2.2'/%3E%3Ccircle cx='0' cy='24' r='2.2'/%3E%3Ccircle cx='24' cy='24' r='2.2'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 14px 14px;
+  box-shadow: inset 0 0 0 3px var(--saffron), inset 0 0 0 5px #fffdf8, 0 6px 14px -6px rgba(0,0,0,.5) }
+body.zlayji .card { background: linear-gradient(#fffdf8, #fbf3e4) }
+body.zlayji .card.joker { background: linear-gradient(160deg, #e9fff2, #b9e8cb); color: var(--zl-green) }
+body.zlayji .card.joker .pip { color: var(--zl-red) }
+body.zlayji .card .as { background: var(--zl-green); color: #fff }
+body.zlayji .score .num { color: var(--zl-red) }
+body.zlayji .score .p.right .num { color: var(--zl-green) }
+body.zlayji .group.meld-swivi { background: rgba(0,98,51,.35); box-shadow: inset 0 0 0 2px #2fb36d }
+body.zlayji .group.meld-swivi .group-label { color: #8ff0bb }
+body.zlayji .group.loose { background: rgba(0,0,0,.18) }
+body.zlayji .potential.is-good { border-color: #2fb36d }
+body.zlayji .big-num { color: var(--zl-red) }
+body.zlayji .login { background: radial-gradient(ellipse at 50% 30%, #c4262e, #9b1c22 50%, #5e0f14) }
+.zl-btn { display: grid; place-items: center; width: 42px; height: 34px; padding: 4px; border-radius: 9px; border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.08); opacity: .75; transition: transform .2s cubic-bezier(.34,1.56,.64,1), opacity .2s, background-color .2s; text-decoration: none !important }
+.zl-btn svg { width: 30px; height: 20px; display: block; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.3) }
+.zl-btn[aria-pressed=true] { opacity: 1; background: rgba(255,255,255,.22); border-color: var(--saffron) }
+.zl-btn:active { transform: scale(.9) }
+.spark.zl-red { color: #c1272d } .spark.zl-green { color: #0a8a4a }
+body.zlayji .table { padding-top: calc(clamp(14px, 3vw, 28px) + 14px) }
+body.zlayji .table::before { opacity: .38 }

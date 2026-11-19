@@ -4,6 +4,7 @@
 self.RamiI18n = {
   en: {
     dir: 'ltr', langName: 'English',
+    zlayji: 'Zlayji mode', zlayjiS: 'Moroccan red and green table with zellige cards. Turn it off to get your own look back.', zlayjiOn: 'Zlayji mode on. Dima Maghrib!',
     storageWarn: 'Not connected to MongoDB, so accounts and games are only kept until the next deploy. Set mongoURI in your environment variables and redeploy.',
     storageL: 'Storage', storageMongo: 'MongoDB (kept across deploys)', storageFile: 'This server only (wiped on redeploy)',
     potTitle: 'What {card} does for you', potPreview: 'If you take {card} from the pile',
@@ -51,7 +52,7 @@ self.RamiI18n = {
     colourN: 'Colour {n}', customColour: 'Custom colour',
     suitColours: 'Suit colours', suitColoursS: 'Four colours make diamonds and clubs easier to tell apart',
     redBlack: 'Red and black', fourColours: 'Four colours', cardSize: 'Card size', small: 'Small', medium: 'Medium', large: 'Large',
-    theme: 'Theme', matchDevice: 'Match my device', light: 'Light', dark: 'Dark', sound: 'Sound on your turn', saveLook: 'Save my look',
+    theme: 'Theme', matchDevice: 'Match my device', light: 'Light', dark: 'Dark', sound: 'Sound effects', saveLook: 'Save my look',
     rulesSaved: 'House rules saved. They apply from the next deal.', saved: 'Saved.', aceNeeded: 'Ace has to count as low, high, or both.',
     joker: 'Joker', suitS: 'spades', suitH: 'hearts', suitD: 'diamonds', suitC: 'clubs', ofSuit: '{rank} of {suit}',
     err: {
@@ -70,6 +71,7 @@ self.RamiI18n = {
 
   fr: {
     dir: 'ltr', langName: 'Français',
+    zlayji: 'Mode Zlayji', zlayjiS: 'Table rouge et verte et cartes en zellige. Désactivez-le pour retrouver votre style.', zlayjiOn: 'Mode Zlayji activé. Dima Maghrib !',
     storageWarn: "Pas connecté à MongoDB : les comptes et les parties ne sont gardés que jusqu'au prochain déploiement. Ajoutez mongoURI à vos variables d'environnement puis redéployez.",
     storageL: 'Stockage', storageMongo: 'MongoDB (conservé entre les déploiements)', storageFile: 'Ce serveur seulement (effacé au redéploiement)',
     potTitle: 'Ce que {card} vous apporte', potPreview: 'Si vous prenez {card} dans la défausse',
@@ -117,7 +119,7 @@ self.RamiI18n = {
     colourN: 'Couleur {n}', customColour: 'Couleur personnalisée',
     suitColours: 'Couleurs des enseignes', suitColoursS: 'Quatre couleurs pour mieux distinguer carreau et trèfle',
     redBlack: 'Rouge et noir', fourColours: 'Quatre couleurs', cardSize: 'Taille des cartes', small: 'Petite', medium: 'Moyenne', large: 'Grande',
-    theme: 'Thème', matchDevice: 'Comme mon appareil', light: 'Clair', dark: 'Sombre', sound: 'Son quand c’est votre tour', saveLook: 'Enregistrer',
+    theme: 'Thème', matchDevice: 'Comme mon appareil', light: 'Clair', dark: 'Sombre', sound: 'Effets sonores', saveLook: 'Enregistrer',
     rulesSaved: 'Règles enregistrées. Elles s’appliquent à la prochaine donne.', saved: 'Enregistré.', aceNeeded: "L'as doit compter bas, haut, ou les deux.",
     joker: 'Joker', suitS: 'pique', suitH: 'cœur', suitD: 'carreau', suitC: 'trèfle', ofSuit: '{rank} de {suit}',
     err: {
@@ -136,6 +138,7 @@ self.RamiI18n = {
 
   ar: {
     dir: 'rtl', langName: 'العربية',
+    zlayji: 'وضع زلايجي', zlayjiS: 'طاولة حمراء وخضراء وأوراق بالزليج. أوقفه لتعود إلى مظهرك.', zlayjiOn: 'وضع زلايجي مفعّل. ديما مغرب!',
     storageWarn: 'غير متصل بـ MongoDB، لذلك تُحفظ الحسابات والألعاب حتى النشر القادم فقط. أضف mongoURI إلى متغيرات البيئة ثم أعد النشر.',
     storageL: 'التخزين', storageMongo: 'MongoDB (يبقى بعد كل نشر)', storageFile: 'هذا الخادم فقط (يُمسح عند إعادة النشر)',
     potTitle: 'ماذا تفيدك {card}', potPreview: 'إذا أخذت {card} من المرمى',
@@ -183,7 +186,7 @@ self.RamiI18n = {
     colourN: 'اللون {n}', customColour: 'لون مخصص',
     suitColours: 'ألوان الأنواع', suitColoursS: 'أربعة ألوان تسهّل التمييز بين الديناري والسباتي',
     redBlack: 'أحمر وأسود', fourColours: 'أربعة ألوان', cardSize: 'حجم الأوراق', small: 'صغير', medium: 'متوسط', large: 'كبير',
-    theme: 'المظهر', matchDevice: 'مثل جهازي', light: 'فاتح', dark: 'داكن', sound: 'صوت عند حلول دورك', saveLook: 'حفظ مظهري',
+    theme: 'المظهر', matchDevice: 'مثل جهازي', light: 'فاتح', dark: 'داكن', sound: 'المؤثرات الصوتية', saveLook: 'حفظ مظهري',
     rulesSaved: 'تم حفظ قواعد البيت. تُطبَّق من التوزيعة التالية.', saved: 'تم الحفظ.', aceNeeded: 'يجب أن يُحسب الآص صغيرًا أو كبيرًا أو كليهما.',
     joker: 'جوكر', suitS: 'بستوني', suitH: 'كبة', suitD: 'ديناري', suitC: 'سباتي', ofSuit: '{rank} {suit}',
     err: {
