@@ -4,6 +4,7 @@
 self.RamiI18n = {
   en: {
     dir: 'ltr', langName: 'English',
+    rpSpeed: 'Speed', rpDoingDraw: 'drawing', rpDoingThrow: 'throwing', rpDoingWin: 'Rami!',
     hcWon: '{name} won', hcWinner: 'winner', hcMore: 'More', hcStarted: 'Started', hcLength: 'Length', hcMinutes: '{n} min',
     replay: 'Replay', watchReplay: 'Watch the replay', replayTitle: 'Game {n} replay', backHistory: 'Back to history', noReplay: 'No replay for games played before replays were added.',
     rpDeal: '{name} dealt. {starter} starts.', rpDrewDeck: '{who} drew {card} from the deck', rpTookPile: '{who} took {card} from the pile', rpThrew: '{who} threw {card}',
@@ -89,6 +90,7 @@ self.RamiI18n = {
 
   fr: {
     dir: 'ltr', langName: 'Français',
+    rpSpeed: 'Vitesse', rpDoingDraw: 'pioche', rpDoingThrow: 'jette', rpDoingWin: 'Rami !',
     hcWon: '{name} a gagné', hcWinner: 'gagnant', hcMore: 'Plus', hcStarted: 'A commencé', hcLength: 'Durée', hcMinutes: '{n} min',
     replay: 'Revoir', watchReplay: 'Revoir la partie', replayTitle: 'Partie {n} en replay', backHistory: 'Retour à l’historique', noReplay: 'Pas de replay pour les parties jouées avant l’ajout des replays.',
     rpDeal: '{name} a distribué. {starter} commence.', rpDrewDeck: '{who} a pioché {card}', rpTookPile: '{who} a pris {card} dans la défausse', rpThrew: '{who} a jeté {card}',
@@ -174,6 +176,7 @@ self.RamiI18n = {
 
   ar: {
     dir: 'rtl', langName: 'العربية',
+    rpSpeed: 'السرعة', rpDoingDraw: 'يسحب', rpDoingThrow: 'يرمي', rpDoingWin: 'رامي!',
     hcWon: 'فاز {name}', hcWinner: 'الفائز', hcMore: 'المزيد', hcStarted: 'بدأ', hcLength: 'المدة', hcMinutes: '{n} دقيقة',
     replay: 'إعادة', watchReplay: 'شاهد الإعادة', replayTitle: 'إعادة اللعبة {n}', backHistory: 'العودة إلى السجل', noReplay: 'لا توجد إعادة للألعاب التي لُعبت قبل إضافة الإعادات.',
     rpDeal: '{name} وزّع الأوراق. {starter} يبدأ.', rpDrewDeck: '{who} سحب {card} من الكومة', rpTookPile: '{who} أخذ {card} من المرمى', rpThrew: '{who} رمى {card}',

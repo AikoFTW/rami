@@ -642,3 +642,46 @@ body.zlayji .hc { border: 0; border-top: 10px solid transparent;
   background: linear-gradient(var(--panel), var(--panel)) padding-box, var(--zl-tile) 0 0 / 20px 20px border-box; box-shadow: 0 0 0 1px rgba(193,39,45,.25) }
 .hc-more-body .kv .full { grid-column: 1 / -1; text-align: start; white-space: normal }
 .hc-more-body .kv dd.full { font-weight: 500; margin-top: -4px }
+
+/* ---------- replay, animated ---------- */
+/* keep each side's height steady so the table doesn't jump between moves */
+.rp-hand .rp-cards { min-height: calc(var(--card-w) * 1.42 + 12px); align-content: flex-start; position: relative }
+@media (max-width: 720px) { .rp-hand .rp-cards { min-height: calc((var(--card-w) * 1.42 + 12px) * 2 + 6px) } }
+.rp-who { align-items: center }
+.rp-who .rp-info { margin-inline-start: auto }
+.rp-doing { font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--saffron); color: #2a1d05;
+  opacity: 0; transform: scale(.6); transition: opacity .2s, transform .3s cubic-bezier(.34,1.56,.64,1) }
+.rp-doing.on { opacity: 1; transform: scale(1) }
+.rp-hand { transition: box-shadow .3s, background-color .3s }
+.rp-hand.active { box-shadow: inset 0 0 0 2px var(--saffron), 0 0 24px -6px rgba(232,178,58,.55) }
+.rp-hand.winning { box-shadow: inset 0 0 0 3px #7fe0a0, 0 0 32px -4px rgba(127,224,160,.6); background: rgba(60,160,90,.22) }
+.rp-hand.winning .group:not(.loose) { animation: meldglow 1.2s ease-in-out .4s 2 }
+@keyframes meldglow { 50% { transform: translateY(-4px); box-shadow: inset 0 0 0 2px #fff } }
+.rp-hand.winning .rp-doing { background: #7fe0a0 }
+.rp-text.swap { animation: textin .35s var(--ease) both }
+@keyframes textin { from { opacity: 0; transform: translateY(6px) } }
+.rp-pile-card { display: grid; place-items: center; min-width: var(--card-w); min-height: calc(var(--card-w) * 1.42) }
+#rpDeck .card { will-change: transform }
+.card.hl-in, .card.hl-out { animation: none }   /* the flight itself is the highlight now */
+.rp-cards .card.hl-in { box-shadow: 0 0 0 3px #7fe0a0, 0 8px 18px -6px rgba(0,0,0,.6); z-index: 2 }
+#rpPile .card.hl-out { box-shadow: 0 0 0 3px var(--saffron), 0 8px 18px -6px rgba(0,0,0,.6) }
+
+/* timeline with key-moment markers */
+.rp-track { position: relative; width: min(100%, 640px); direction: ltr }
+.rp-track input[type=range] { width: 100%; margin: 0 }
+.rp-marks { position: absolute; left: 0; right: 0; top: -6px; height: 0; pointer-events: none }
+.rp-mark { position: absolute; top: 0; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; border: 2px solid var(--panel);
+  background: var(--muted); pointer-events: auto; padding: 0; transition: transform .2s cubic-bezier(.34,1.56,.64,1) }
+.rp-mark:hover { transform: scale(1.35) }
+.rp-mark.k-missedRami, .rp-moments .k-missedRami .rp-when { --k: #d9534f } .rp-mark.k-satOn, .rp-moments .k-satOn .rp-when { --k: #c98a10 }
+.rp-mark.k-gaveWin, .rp-moments .k-gaveWin .rp-when { --k: #c98a10 } .rp-mark.k-win, .rp-moments .k-win .rp-when { --k: #2f9e5e }
+.rp-mark.k-joker, .rp-moments .k-joker .rp-when { --k: #7a5cc0 } .rp-mark.k-resign { --k: var(--muted) }
+.rp-mark { background: var(--k, var(--muted)) }
+.rp-moments .rp-when { color: var(--k, var(--muted)) }
+.rp-moments button.now { background: color-mix(in srgb, var(--saffron) 18%, transparent); border-color: var(--saffron) }
+.rp-under { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap }
+.rp-speed { background: color-mix(in srgb, var(--ink) 8%, transparent); border-color: var(--line) }
+.rp-speed .seg-btn { color: var(--ink); min-height: 36px; min-width: 44px; font-size: 15px }
+.rp-speed .seg-btn.on { background: var(--felt); color: #fff }
+.rp-play.playing { animation: pulse 1.6s ease-in-out infinite }
+.rp-doing:empty { display: none }

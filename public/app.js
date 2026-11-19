@@ -672,7 +672,8 @@
 
   // ---------- replay ----------
   const replayCache = {};
-  let rp = null;   // { no, r, frames, an, idx, timer }
+  let rp = null;   // { no, r, frames, an, idx, timer, speed, top, bottom }
+  const plain = html => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent; };
   async function renderReplay(no) {
     const main = $('#main');
     if (rp?.no === no && main.querySelector('.replay')) return;   // already showing it
@@ -685,65 +686,95 @@
     }
     if (route() !== 'replay-' + no) return;
     const frames = RamiReplay.buildFrames(r), an = RamiReplay.analyse(r, frames);
-    rp = { no, r, frames, an, idx: 0, timer: null };
     const [top, bottom] = r.players.includes(me()) ? [r.players.find(p => p !== me()), me()] : r.players;
-    rp.top = top; rp.bottom = bottom;
+    rp = { no, r, frames, an, idx: -1, timer: null, speed: rp?.speed || 1, top, bottom };
     const st = an.stats, rows = [['sBest', 'best'], ['sOneAway', 'oneAway'], ['sDeck', 'deckDraws'], ['sPile', 'pileDraws'],
       ['sJokers', 'jokers'], ['sMissed', 'missedRami'], ['sHelp', 'missedHelp'], ['sHeld', 'heldFromDeal']];
-    const endedAt = new Date(r.endedAt);
+    const endedAt = new Date(r.endedAt), last = frames.length - 1;
+    const pos = i => (i / Math.max(1, last) * 100).toFixed(2);
+    const marks = an.moments.map(m => `<button type="button" class="rp-mark k-${m.kind}" data-i="${m.i}" style-pos="${pos(m.i)}" title="${esc(plain(momentText(m)))}" aria-label="${esc(plain(momentText(m)))}"></button>`).join('');
+    const handBox = (p, where) => `<div class="rp-hand" id="rpHand-${where}" data-p="${p}">
+        <div class="rp-who"><b>${esc(nameOf(p))}</b><span class="rp-doing"></span><span class="rp-info"></span></div>
+        <div class="hand rp-cards"></div></div>`;
     main.innerHTML = `<div class="replay">
       <div class="rp-head"><a class="btn" href="#history">${document.documentElement.dir === 'rtl' ? '→' : '←'} ${esc(t('backHistory'))}</a>
         <h1 class="page-title">${esc(t('replayTitle', { n: no }))}</h1>
         <p class="rp-sub">${esc(r.result === 'rami' ? t('xWins', { name: nameOf(r.winner) }) : t('resigned', { name: nameOf(r.players.find(p => p !== r.winner)) }))} · ${esc(t('turnsN', { n: r.turns }))} · ${endedAt.toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}</p></div>
-      <div class="table rp-table" id="rpBoard"></div>
+      <div class="table rp-table" id="rpBoard">
+        ${handBox(top, 'top')}
+        <div class="rp-center">
+          <div class="pile" id="rpDeck"><div class="card back"></div><small></small></div>
+          <p class="rp-text" id="rpText" aria-live="polite"></p>
+          <div class="pile" id="rpPile"><div class="rp-pile-card"></div><small></small></div>
+        </div>
+        ${handBox(bottom, 'bottom')}
+      </div>
       <div class="rp-controls">
         <div class="rp-buttons">
           <button class="btn" id="rpFirst" aria-label="${esc(t('rpFirst'))}">⏮</button>
           <button class="btn" id="rpPrev" aria-label="${esc(t('rpPrev'))}">◀</button>
-          <button class="btn primary" id="rpPlay" aria-label="${esc(t('rpPlay'))}">▶</button>
+          <button class="btn primary rp-play" id="rpPlay" aria-label="${esc(t('rpPlay'))}">▶</button>
           <button class="btn" id="rpNext" aria-label="${esc(t('rpNext'))}">▶▶</button>
           <button class="btn" id="rpLast" aria-label="${esc(t('rpLast'))}">⏭</button>
         </div>
-        <input type="range" id="rpRange" min="0" max="${frames.length - 1}" value="0" aria-label="${esc(t('rpStep', { i: 1, n: frames.length }))}">
-        <p class="rp-count" id="rpCount"></p>
+        <div class="rp-track"><input type="range" id="rpRange" min="0" max="${last}" value="0" aria-label="${esc(t('rpStep', { i: 1, n: frames.length }))}"><div class="rp-marks">${marks}</div></div>
+        <div class="rp-under">
+          <p class="rp-count" id="rpCount"></p>
+          <div class="seg rp-speed" role="group" aria-label="${esc(t('rpSpeed'))}">${[0.5, 1, 2].map(v => `<button class="seg-btn${rp.speed === v ? ' on' : ''}" data-speed="${v}">${v === 0.5 ? '½' : v}×</button>`).join('')}</div>
+        </div>
       </div>
       <div class="grid2 gap-top">
         <div class="panel"><h2>${esc(t('rpProgress'))}</h2><p class="hint">${esc(t('rpProgressS'))}</p>
           <div class="rp-chart" id="rpChart">${chartSVG(an.progress, frames.length, [bottom, top])}</div>
           <div class="rp-legend"><span class="lg a">${esc(nameOf(bottom))}</span><span class="lg b">${esc(nameOf(top))}</span></div></div>
         <div class="panel"><h2>${esc(t('rpMoments'))}</h2>
-          ${an.moments.length ? `<ol class="rp-moments">${an.moments.map(m => `<li><button type="button" data-i="${m.i}">
+          ${an.moments.length ? `<ol class="rp-moments">${an.moments.map(m => `<li><button type="button" data-i="${m.i}" class="k-${m.kind}">
             <span class="rp-when">${esc(t('rpTurn', { n: Math.max(1, frames[m.i].turn) }))}</span><span>${momentText(m)}</span></button></li>`).join('')}</ol>` : `<p>${esc(t('rpNoMoments'))}</p>`}</div>
       </div>
       <div class="panel gap-top"><h2>${esc(t('rpStats'))}</h2>
         <table class="rp-stats"><thead><tr><th></th><th>${esc(nameOf(bottom))}</th><th>${esc(nameOf(top))}</th></tr></thead>
         <tbody>${rows.map(([k, f]) => `<tr><td>${esc(t(k))}</td><td class="n">${st[bottom][f]}</td><td class="n">${st[top][f]}</td></tr>`).join('')}</tbody></table></div>
     </div>`;
-    $('#rpFirst').onclick = () => rpGo(0);
-    $('#rpPrev').onclick = () => rpGo(rp.idx - 1);
-    $('#rpNext').onclick = () => rpGo(rp.idx + 1);
-    $('#rpLast').onclick = () => rpGo(frames.length - 1);
+    main.querySelectorAll('.rp-mark').forEach(m => { m.style.left = `calc(${m.getAttribute('style-pos')}% + ${(0.5 - m.getAttribute('style-pos') / 100) * 26}px)`; });
+    const jump = i => { stopReplay(); rpGo(i); };
+    $('#rpFirst').onclick = () => jump(0);
+    $('#rpPrev').onclick = () => jump(rp.idx - 1);
+    $('#rpNext').onclick = () => jump(rp.idx + 1);
+    $('#rpLast').onclick = () => jump(last);
     $('#rpPlay').onclick = () => rp.timer ? stopReplay() : startReplay();
-    $('#rpRange').oninput = e => { stopReplay(); rpGo(+e.target.value); };
-    main.querySelectorAll('.rp-moments button').forEach(b => b.onclick = () => { stopReplay(); rpGo(+b.dataset.i); window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' }); });
-    $('#rpChart').onclick = e => { const b = e.currentTarget.getBoundingClientRect(); stopReplay(); rpGo(Math.round((e.clientX - b.left) / b.width * (frames.length - 1))); };
-    rpGo(0);
+    $('#rpRange').oninput = e => jump(+e.target.value);
+    main.querySelectorAll('.rp-mark').forEach(b => b.onclick = () => jump(+b.dataset.i));
+    main.querySelectorAll('.rp-speed .seg-btn').forEach(b => b.onclick = () => {
+      rp.speed = +b.dataset.speed;
+      main.querySelectorAll('.rp-speed .seg-btn').forEach(x => x.classList.toggle('on', x === b));
+    });
+    main.querySelectorAll('.rp-moments button').forEach(b => b.onclick = () => { jump(+b.dataset.i); $('#rpBoard').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' }); });
+    $('#rpChart').onclick = e => { const b = e.currentTarget.getBoundingClientRect(); const x = document.documentElement.dir === 'rtl' ? b.right - e.clientX : e.clientX - b.left; jump(Math.round(x / b.width * last)); };
+    rpGo(0, { deal: true });
   }
-  function stopReplay() { if (rp?.timer) { clearInterval(rp.timer); rp.timer = null; const b = $('#rpPlay'); if (b) { b.textContent = '▶'; b.setAttribute('aria-label', t('rpPlay')); } } }
+
+  const STEP_MS = 1300;   // one move per 1.3 s at 1×
+  function stopReplay() {
+    if (rp?.timer) { clearTimeout(rp.timer); rp.timer = null; }
+    const b = $('#rpPlay'); if (b) { b.textContent = '▶'; b.setAttribute('aria-label', t('rpPlay')); b.classList.remove('playing'); }
+  }
   function startReplay() {
     if (!rp) return;
-    if (rp.idx >= rp.frames.length - 1) rpGo(0);
-    rp.timer = setInterval(() => {
-      if (route() !== 'replay-' + rp.no) return stopReplay();
+    if (rp.idx >= rp.frames.length - 1) rpGo(0, { deal: true });
+    const tick = () => {
+      if (!rp || route() !== 'replay-' + rp.no) return stopReplay();
       if (rp.idx >= rp.frames.length - 1) return stopReplay();
       rpGo(rp.idx + 1);
-    }, 1000);
-    const b = $('#rpPlay'); b.textContent = '⏸'; b.setAttribute('aria-label', t('rpPause'));
+      rp.timer = setTimeout(tick, STEP_MS / rp.speed);
+    };
+    rp.timer = setTimeout(tick, 350 / rp.speed);
+    const b = $('#rpPlay'); b.textContent = '⏸'; b.setAttribute('aria-label', t('rpPause')); b.classList.add('playing');
   }
   window.addEventListener('keydown', e => {
     if (!rp || route() !== 'replay-' + rp.no || /input|select|textarea/i.test(e.target.tagName)) return;
-    if (e.key === 'ArrowRight') { stopReplay(); rpGo(rp.idx + (document.documentElement.dir === 'rtl' ? -1 : 1)); }
-    if (e.key === 'ArrowLeft') { stopReplay(); rpGo(rp.idx + (document.documentElement.dir === 'rtl' ? 1 : -1)); }
+    const fwd = document.documentElement.dir === 'rtl' ? -1 : 1;
+    if (e.key === 'ArrowRight') { stopReplay(); rpGo(rp.idx + fwd); }
+    if (e.key === 'ArrowLeft') { stopReplay(); rpGo(rp.idx - fwd); }
     if (e.key === ' ') { e.preventDefault(); rp.timer ? stopReplay() : startReplay(); }
   });
   function stepText(f) {
@@ -778,35 +809,81 @@
       <line id="rpMark" class="mark" vector-effect="non-scaling-stroke" x1="${X(0)}" x2="${X(0)}" y1="0" y2="${H}"/></svg>
       <span class="rp-y y14">14</span><span class="rp-y y0">0</span>`;
   }
-  function rpGo(i) {
+
+  // Draw one moment of the game; when moving a single step, animate what changed.
+  function rpGo(i, opt = {}) {
     if (!rp) return;
     const { frames, r } = rp;
     i = Math.max(0, Math.min(frames.length - 1, i));
+    const step = i - rp.idx, animate = !reduceMotion() && (opt.deal || Math.abs(step) === 1);
+    if (step === 0 && !opt.deal) return;
     rp.idx = i;
     const f = frames[i], e = f.ev;
-    const hand = p => {
+
+    // remember where every card is before redrawing
+    const before = new Map();
+    if (animate) document.querySelectorAll('#rpBoard [data-id]').forEach(el => before.set(el.dataset.id, { r: el.getBoundingClientRect(), pile: !!el.closest('#rpPile') }));
+    const deckRect = document.querySelector('#rpDeck .card').getBoundingClientRect();
+
+    const doing = { draw: 'rpDoingDraw', discard: 'rpDoingThrow', rami: 'rpDoingWin' }[e.type];
+    for (const where of ['top', 'bottom']) {
+      const box = $('#rpHand-' + where), p = box.dataset.p;
       const ids = sortCards(f.hands[p], sortBy());
       const lay = bestMelds(ids, r.rules);
       const n = lay.melds.reduce((k, m) => k + m.cards.length, 0);
       const cls = id => (e.type === 'draw' && e.by === p && id === e.card ? 'hl-in' : '');
-      const groups = lay.melds.map(m => `<div class="group meld-${m.type}"><div class="group-cards">${m.cards.map(c => cardHTML(c, cls(c))).join('')}</div></div>`).join('')
+      box.querySelector('.rp-cards').innerHTML = lay.melds.map(m => `<div class="group meld-${m.type}"><div class="group-cards">${m.cards.map(c => cardHTML(c, cls(c))).join('')}</div></div>`).join('')
         + (lay.loose.length ? `<div class="group loose"><div class="group-cards">${lay.loose.map(c => cardHTML(c, cls(c))).join('')}</div></div>` : '');
-      const active = e.by === p && e.type !== 'reshuffle';
-      return `<div class="rp-hand${active ? ' active' : ''}"><div class="rp-who"><b>${esc(nameOf(p))}</b><span>${esc(t('rpInMelds', { c: n }))} · ${esc(t('cardsN', { n: f.hands[p].length }))}</span></div>
-        <div class="hand rp-cards">${groups}</div></div>`;
-    };
+      box.querySelector('.rp-info').textContent = `${t('rpInMelds', { c: n })} · ${t('cardsN', { n: f.hands[p].length })}`;
+      const active = e.by === p && !!doing;
+      box.classList.toggle('active', active);
+      box.classList.toggle('winning', e.type === 'rami' && e.by === p);
+      const chip = box.querySelector('.rp-doing');
+      chip.textContent = active ? t(doing) : '';
+      chip.classList.toggle('on', active);
+    }
     const top = f.pile[f.pile.length - 1];
-    const outCls = (e.type === 'discard' || e.type === 'rami') ? 'hl-out' : '';
-    $('#rpBoard').innerHTML = `${hand(rp.top)}
-      <div class="rp-center"><div class="pile"><div class="card back"></div><small>${esc(t('deck'))} · ${f.deck}</small></div>
-        <p class="rp-text">${stepText(f)}</p>
-        <div class="pile">${cardHTML(top, outCls)}<small>${esc(t('discard'))} · ${f.pile.length}</small></div></div>
-      ${hand(rp.bottom)}`;
+    $('#rpPile .rp-pile-card').innerHTML = cardHTML(top, (e.type === 'discard' || e.type === 'rami') ? 'hl-out' : '');
+    $('#rpPile small').textContent = `${t('discard')} · ${f.pile.length}`;
+    $('#rpDeck small').textContent = `${t('deck')} · ${f.deck}`;
+    const text = $('#rpText');
+    text.innerHTML = stepText(f);
+    text.classList.remove('swap'); void text.offsetWidth; text.classList.add('swap');
     $('#rpRange').value = i;
     $('#rpCount').textContent = `${t('rpStep', { i: i + 1, n: frames.length })} · ${t('rpTurn', { n: Math.max(1, f.turn + (e.type === 'deal' ? 1 : 0)) })}`;
     const mark = $('#rpMark'); if (mark) { const x = 10 + i / Math.max(1, frames.length - 1) * 580; mark.setAttribute('x1', x); mark.setAttribute('x2', x); }
-    if (i > 0 && (e.type === 'draw' || e.type === 'discard')) sfx[e.type === 'draw' ? 'flip' : 'throw']();
-    if (e.type === 'rami') sfx.win();
+    document.querySelectorAll('.rp-moments button').forEach(b => b.classList.toggle('now', +b.dataset.i === i));
+
+    if (!animate) return;
+    // play the move: cards glide to their new spots; new ones fly in from the deck and turn over
+    const fresh = [];
+    document.querySelectorAll('#rpBoard [data-id]').forEach(el => {
+      const b = !opt.deal && before.get(el.dataset.id);
+      if (!b) return fresh.push(el);
+      const now = el.getBoundingClientRect(), dx = b.r.left - now.left, dy = b.r.top - now.top;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) travel(el, dx, dy, b.pile !== !!el.closest('#rpPile'));
+    });
+    if (opt.deal) {
+      // deal: cards go out one by one, alternating between the two sides
+      const bySide = ['top', 'bottom'].map(w => fresh.filter(el => el.closest('#rpHand-' + w)));
+      let k = 0;
+      for (let n = 0; n < Math.max(bySide[0].length, bySide[1].length); n++)
+        for (const side of bySide) if (side[n]) flyIn(side[n], deckRect, 80 + k++ * 38, 520);
+      sfx.shuffle(); sfx.deal(Math.min(k, 30));
+    } else {
+      fresh.forEach(el => { if (!el.closest('#rpPile')) flyIn(el, deckRect, 0, 600); });
+    }
+    if (e.type === 'reshuffle') {
+      document.querySelector('#rpDeck .card').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(7deg)' }, { transform: 'rotate(-4deg)' }, { transform: 'rotate(0)' }], { duration: 600 });
+      sfx.shuffle();
+    }
+    // whose move it is: their side gives a small nudge
+    if (doing && step > 0) { const box = document.querySelector(`.rp-hand[data-p="${e.by}"]`); box?.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${box.id.endsWith('top') ? 4 : -4}px)` }, { transform: 'translateY(0)' }], { duration: 380, easing: 'ease-out' }); }
+    if (step > 0) {
+      if (e.type === 'draw') sfx.flip();
+      if (e.type === 'discard') sfx.throw();
+      if (e.type === 'rami') { sfx.throw(); setTimeout(() => { sfx.win(); celebrate(e.by === me() || !r.players.includes(me())); }, 420); }
+    }
   }
 
   // ---------- stats ----------
