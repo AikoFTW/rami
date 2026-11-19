@@ -555,3 +555,90 @@ body.zlayji #toast { background: var(--zl-green); box-shadow: 0 0 0 2px var(--zl
 .notify-test { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 4px }
 .notify-test small { color: var(--muted); font-size: 14px }
 .notify-test .btn { min-height: 40px; padding: 6px 16px; font-size: 15px }
+
+/* ---------- replay ---------- */
+.rp-head { display: grid; gap: 8px; margin-bottom: 14px; justify-items: start }
+.rp-head .page-title { margin: 4px 0 0 }
+.rp-sub { margin: 0; color: var(--muted) }
+.rp-table { display: grid; gap: 10px }
+.rp-hand { border-radius: 14px; padding: 8px; background: rgba(0,0,0,.16); transition: box-shadow .25s, background-color .25s }
+.rp-hand.active { box-shadow: inset 0 0 0 2px var(--saffron); background: rgba(0,0,0,.24) }
+.rp-who { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 0 4px 6px; font-size: 15px }
+.rp-who b { font-size: 17px } .rp-who span { opacity: .85 }
+.rp-cards { --card-w: 46px; min-height: 0; gap: 8px; justify-content: flex-start }
+.rp-cards .group { padding: 4px } .rp-cards .group-cards { flex-wrap: nowrap; gap: 0 }
+.rp-cards .group-cards .card + .card { margin-left: -18px }
+.rp-cards .card { cursor: default }
+.rp-cards .card .tl { font-size: 14px }
+.rp-center { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 4px 6px }
+.rp-center .pile { --card-w: 46px } .rp-center .pile small { font-size: 13px }
+.rp-text { margin: 0; text-align: center; font-size: 17px; min-height: 2.6em; display: grid; place-items: center }
+.card.hl-in { box-shadow: 0 0 0 3px #7fe0a0, 0 8px 18px -6px rgba(0,0,0,.6); animation: hlpop .45s cubic-bezier(.34,1.56,.64,1) both; z-index: 1 }
+.card.hl-out { box-shadow: 0 0 0 3px var(--saffron), 0 8px 18px -6px rgba(0,0,0,.6); animation: hlpop .45s cubic-bezier(.34,1.56,.64,1) both }
+@keyframes hlpop { from { transform: translateY(-10px) scale(1.12) } }
+.rp-controls { display: grid; gap: 8px; margin-top: 12px; justify-items: center }
+.rp-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; direction: ltr }
+.rp-buttons .btn { min-width: 56px; font-size: 18px }
+.rp-controls input[type=range] { width: min(100%, 640px); accent-color: var(--felt); direction: ltr; height: 32px }
+.rp-count { margin: 0; color: var(--muted); font-size: 15px }
+.rp-chart { position: relative; height: 170px; cursor: pointer; direction: ltr; margin-top: 6px }
+.rp-chart svg { position: absolute; inset: 0; width: 100%; height: 100% }
+.rp-chart polyline { fill: none; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round }
+.rp-chart .pa { stroke: var(--felt) } .rp-chart .pb { stroke: var(--saffron) }
+.rp-chart .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4 }
+.rp-chart .mark { stroke: var(--terra); stroke-width: 2 }
+.rp-y { position: absolute; left: -2px; font-size: 12px; color: var(--muted) } .rp-y.y14 { top: 10px } .rp-y.y0 { bottom: 2px }
+.rp-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 15px }
+.rp-legend .lg::before { content: ''; display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-inline-end: 6px; vertical-align: middle }
+.rp-legend .a::before { background: var(--felt) } .rp-legend .b::before { background: var(--saffron) }
+.rp-moments { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.rp-moments button { display: grid; gap: 2px; width: 100%; text-align: start; background: color-mix(in srgb, var(--ink) 4%, transparent); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 12px; font-size: 16px; transition: background-color .2s }
+.rp-moments button:hover { background: color-mix(in srgb, var(--saffron) 14%, transparent) }
+.rp-when { font-size: 13px; color: var(--muted); font-weight: 600 }
+.rp-moments .s-H, .rp-moments .s-D, .rp-text .s-H, .rp-text .s-D { color: var(--terra) }
+.rp-text .s-H, .rp-text .s-D { color: #ffb4a3 }
+table.rp-stats { width: 100%; border-collapse: collapse; font-size: 16px }
+.rp-stats th, .rp-stats td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: start }
+.rp-stats th { font-size: 14px; color: var(--muted); font-weight: 600 } .rp-stats td.n, .rp-stats th:not(:first-child) { text-align: end; width: 22%; font-weight: 600 }
+.replay-btn { display: inline-flex; margin-top: 6px; min-height: 38px; padding: 4px 14px; font-size: 15px; text-decoration: none }
+.result-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.result-actions a.btn { text-decoration: none; display: inline-flex; align-items: center }
+@media (max-width: 720px) {
+  .rp-cards { --card-w: 40px; gap: 6px } .rp-cards .group-cards .card + .card { margin-left: -17px }
+  .rp-center .pile { --card-w: 40px } .rp-text { font-size: 15px }
+  .rp-buttons .btn { min-width: 48px; padding: 6px 10px }
+  .rp-stats td, .rp-stats th { padding: 9px 4px; font-size: 15px }
+}
+.rp-text { display: block; align-self: center }
+a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px }
+a.btn.primary { color: #2a1d05 }
+
+/* ---------- history cards ---------- */
+.hc-list { display: grid; gap: 14px }
+.hc { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 10px }
+.hc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px }
+.hc-no { font-family: 'Reem Kufi', Rubik; color: var(--muted); font-size: 18px }
+.hc-title { display: flex; align-items: center; gap: 8px; font-size: 18px }
+.hc-meta { color: var(--muted); font-size: 15px; margin-inline-start: auto }
+.hc-hands { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px }
+.hc-side { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 4%, transparent) }
+.hc-side.win { background: color-mix(in srgb, var(--saffron) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--saffron) 50%, transparent) }
+.hc-label { font-size: 14px; font-weight: 600; color: var(--muted) }
+.hc-side .melds { margin: 0; gap: 6px }
+.hc-side .meld { padding: 5px; flex-wrap: nowrap; gap: 0 }
+.hc-side .meld .card.mini { --card-w: 34px }
+.hc-side .meld .card.mini + .card.mini { margin-left: -13px }
+.hc-side .meld.meld-loose { flex-wrap: wrap; row-gap: 4px }
+.hc-more summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 14px;
+  border-radius: 999px; border: 1px solid var(--line); font-weight: 600; font-size: 15px }
+.hc-more summary::-webkit-details-marker { display: none }
+.hc-more summary::after { content: '▾'; transition: transform .2s }
+.hc-more[open] summary::after { transform: rotate(180deg) }
+.hc-more-body { display: grid; gap: 12px; padding-top: 10px; animation: rise .25s var(--ease) both }
+.hc-more-body .kv { margin: 0 } .hc-more-body .kv dd.wrap { white-space: normal; text-align: end; font-weight: 500 }
+.hc-more-body .btn { justify-self: start }
+body.zlayji .hc { border: 0; border-top: 10px solid transparent;
+  background: linear-gradient(var(--panel), var(--panel)) padding-box, var(--zl-tile) 0 0 / 20px 20px border-box; box-shadow: 0 0 0 1px rgba(193,39,45,.25) }
+.hc-more-body .kv .full { grid-column: 1 / -1; text-align: start; white-space: normal }
+.hc-more-body .kv dd.full { font-weight: 500; margin-top: -4px }

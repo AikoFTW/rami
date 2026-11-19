@@ -159,7 +159,7 @@ function stateFor(u) {
     game: game.view(db.game, u.id),
     stats: stats(),
     storage: mongoUri() ? 'mongodb' : 'file',
-    history: db.history.slice(-100).reverse().map(h => ({ ...h, loserHand: undefined })),
+    history: db.history.slice(-100).reverse(),
     version,
   };
 }
@@ -280,6 +280,15 @@ async function api(req, res, url) {
         if (visible) looking.get(u.id).add(page); else looking.get(u.id).delete(page);
       }
       return send(res, 200, { ok: true });
+    }
+    case 'GET /api/replay': {
+      const no = +url.searchParams.get('no');
+      const g = db.game && db.game.no === no ? db.game : await store.getGame(no);
+      if (!g || !g.players.includes(u.id)) return send(res, 404, { error: 'Game not found.' });
+      if (!g.result) return send(res, 409, { error: 'This game is still being played.' });
+      const r = game.replay(g);
+      if (!r) return send(res, 404, { error: 'This game was played before replays were recorded.', code: 'noReplay' });
+      return send(res, 200, r);
     }
     case 'GET /api/push/key': return send(res, 200, { publicKey: vapid?.publicKey || null });
     case 'POST /api/push/subscribe': {

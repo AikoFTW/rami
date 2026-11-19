@@ -15,7 +15,8 @@ function summary(g) {
   return {
     no: g.no, players: g.players, winner: g.winner, result: g.result, turns: g.turns,
     startedAt: g.startedAt, endedAt: g.endedAt, rules: g.rules,
-    melds: g.melds || null, loserHand: opp ? g.hands[opp] : null,
+    melds: g.melds || null, loserHand: opp ? g.hands[opp] : null, winnerHand: g.hands[g.winner] || null,
+    starter: g.starter, replay: !!g.initial,
   };
 }
 
@@ -64,6 +65,7 @@ class MongoStore {
   async getSetting(id) { const d = await this.settings.findOne({ _id: id }); if (!d) return null; const { _id, ...rest } = d; return rest; }
   async saveSetting(id, doc) { await this.settings.replaceOne({ _id: id }, doc, { upsert: true }); }
   async saveGame(g) { await this.games.replaceOne({ _id: g.no }, g, { upsert: true }); }
+  async getGame(no) { const d = await this.games.findOne({ _id: no }); if (!d) return null; const { _id, ...g } = d; return g; }
   async close() { await this.client?.close(); }
 }
 
@@ -94,6 +96,7 @@ class FileStore {
   async getSetting(id) { return (this.data.settings || {})[id] || null; }
   async saveSetting(id, doc) { this.data.settings = { ...(this.data.settings || {}), [id]: doc }; await this.flush(); }
   async saveGame(g) { this.data.games[g.no] = g; await this.flush(); }
+  async getGame(no) { return this.data.games[no] || null; }
   async close() {}
 }
 

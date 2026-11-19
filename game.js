@@ -62,6 +62,8 @@ function newGame({ no, players, starter, rules }) {
   for (const p of players) hands[p] = deck.splice(0, rules.handSize + (p === starter ? 1 : 0));
   return {
     no, players, rules, starter,
+    // kept for replays: the hands as dealt and the deck size after dealing
+    initial: { hands: JSON.parse(JSON.stringify(hands)), deck: deck.length },
     deck, discard: [], hands,
     turn: starter, phase: 'discard',   // starter has the extra card and opens by discarding
     turns: 0, log: [], lastDrawn: {},
@@ -114,8 +116,8 @@ function apply(g, uid, move) {
     hand.push(card);
     g.lastDrawn[uid] = card;
     g.phase = 'discard';
-    g.log.push({ by: uid, type: 'draw', source: move.source === 'discard' ? 'discard' : 'deck',
-      card: move.source === 'discard' ? card : undefined, at: Date.now() });
+    // every drawn card is recorded (for replays); view() hides other players' deck draws during the game
+    g.log.push({ by: uid, type: 'draw', source: move.source === 'discard' ? 'discard' : 'deck', card, at: Date.now() });
     return {};
   }
 
@@ -160,10 +162,21 @@ function view(g, uid) {
     counts: Object.fromEntries(g.players.map(p => [p, g.hands[p].length])),
     // the opponent's hand is revealed only when the game ends
     oppHand: over && opp ? g.hands[opp] : null,
-    log: g.log.slice(-40).map(e => ({ ...e })),
+    log: g.log.slice(-40).map(e => (!over && e.type === 'draw' && e.source === 'deck' && e.by !== uid) ? { ...e, card: undefined } : { ...e }),
     winner: g.winner, result: g.result, melds: over ? g.melds || null : null,
+    replayable: !!g.initial,
     startedAt: g.startedAt, endedAt: g.endedAt,
   };
 }
 
-module.exports = { DEFAULT_RULES, cleanRules, newGame, apply, view, findRami, bestMelds, parse };
+// Everything needed to replay a finished game: both starting hands and every move.
+function replay(g) {
+  if (!g || !g.result || !g.initial) return null;
+  return {
+    no: g.no, players: g.players, starter: g.starter, rules: g.rules, initial: g.initial, log: g.log,
+    finalHands: g.hands, winner: g.winner, result: g.result, melds: g.melds || null, turns: g.turns,
+    startedAt: g.startedAt, endedAt: g.endedAt,
+  };
+}
+
+module.exports = { replay, DEFAULT_RULES, cleanRules, newGame, apply, view, findRami, bestMelds, parse };

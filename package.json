@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node test/rules.test.js && node test/melds.test.js && node test/store.test.js && node test/webpush.test.js"
+    "test": "node test/rules.test.js && node test/melds.test.js && node test/replay.test.js && node test/store.test.js && node test/webpush.test.js"
   },
   "engines": { "node": ">=20.12" },
   "dependencies": {

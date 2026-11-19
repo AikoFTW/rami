@@ -258,7 +258,7 @@
         settings: '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
       };
       const links = ['play', 'stats', 'history', 'settings']
-        .map(k => `<a href="#${k}"${r === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icons[k]}</svg><span>${esc(t(k))}</span></a>`).join('');
+        .map(k => `<a href="#${k}"${r === k || (k === 'history' && r.startsWith('replay-')) ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icons[k]}</svg><span>${esc(t(k))}</span></a>`).join('');
       app.innerHTML = `<header class="top">
         <a class="brand" href="#play"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 8l6 10 11-3-3 11 10 6-10 6 3 11-11-3-6 10-6-10-11 3 3-11-10-6 10-6-3-11 11 3z"/></svg>Rami</a>
         <nav class="tabs">${links}</nav>
@@ -266,7 +266,8 @@
       $('#out').addEventListener('click', async () => { await call('/api/logout', {}).catch(() => {}); S = null; shellKey = null; renderLogin(); });
       $('#topLang').addEventListener('change', e => { setLang(e.target.value, true); render(); });
     }
-    ({ play: renderPlay, stats: renderStats, history: renderHistory, settings: renderSettings }[r] || renderPlay)();
+    if (r.startsWith('replay-')) renderReplay(+r.slice(7));
+    else ({ play: renderPlay, stats: renderStats, history: renderHistory, settings: renderSettings }[r] || renderPlay)();
     if (r !== lastRoute) {
       const m = $('#main'); m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter');
       lastRoute = r;
@@ -655,7 +656,8 @@
     return `<div class="result"><h2>${esc(iWon ? t('ramiYouWin') : t('xWins', { name: nameOf(g.winner) }))}</h2><p>${esc(how)}</p>
       ${melds ? `<div class="melds">${melds}</div>` : ''}
       ${loserHTML}
-      <button class="btn primary big" id="again">${esc(t('dealNext'))}</button></div>`;
+      <div class="result-actions"><button class="btn primary big" id="again">${esc(t('dealNext'))}</button>
+      ${g.replayable ? `<a class="btn big" href="#replay-${g.no}">▶ ${esc(t('watchReplay'))}</a>` : ''}</div></div>`;
   }
 
   async function deal() {
@@ -666,6 +668,145 @@
     if (b.dataset.confirm) return move({ type: 'resign' });
     b.dataset.confirm = '1'; b.textContent = t('tapAgain');
     setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = t('resign'); } }, 4000);
+  }
+
+  // ---------- replay ----------
+  const replayCache = {};
+  let rp = null;   // { no, r, frames, an, idx, timer }
+  async function renderReplay(no) {
+    const main = $('#main');
+    if (rp?.no === no && main.querySelector('.replay')) return;   // already showing it
+    stopReplay();
+    main.innerHTML = `<p class="boot">…</p>`;
+    let r = replayCache[no];
+    if (!r) {
+      try { r = replayCache[no] = await call(`/api/replay?no=${no}`); }
+      catch (e) { if (route() === 'replay-' + no) main.innerHTML = `<div class="panel"><p>${esc(e.message)}</p><a class="btn" href="#history">${esc(t('backHistory'))}</a></div>`; return; }
+    }
+    if (route() !== 'replay-' + no) return;
+    const frames = RamiReplay.buildFrames(r), an = RamiReplay.analyse(r, frames);
+    rp = { no, r, frames, an, idx: 0, timer: null };
+    const [top, bottom] = r.players.includes(me()) ? [r.players.find(p => p !== me()), me()] : r.players;
+    rp.top = top; rp.bottom = bottom;
+    const st = an.stats, rows = [['sBest', 'best'], ['sOneAway', 'oneAway'], ['sDeck', 'deckDraws'], ['sPile', 'pileDraws'],
+      ['sJokers', 'jokers'], ['sMissed', 'missedRami'], ['sHelp', 'missedHelp'], ['sHeld', 'heldFromDeal']];
+    const endedAt = new Date(r.endedAt);
+    main.innerHTML = `<div class="replay">
+      <div class="rp-head"><a class="btn" href="#history">${document.documentElement.dir === 'rtl' ? '→' : '←'} ${esc(t('backHistory'))}</a>
+        <h1 class="page-title">${esc(t('replayTitle', { n: no }))}</h1>
+        <p class="rp-sub">${esc(r.result === 'rami' ? t('xWins', { name: nameOf(r.winner) }) : t('resigned', { name: nameOf(r.players.find(p => p !== r.winner)) }))} · ${esc(t('turnsN', { n: r.turns }))} · ${endedAt.toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}</p></div>
+      <div class="table rp-table" id="rpBoard"></div>
+      <div class="rp-controls">
+        <div class="rp-buttons">
+          <button class="btn" id="rpFirst" aria-label="${esc(t('rpFirst'))}">⏮</button>
+          <button class="btn" id="rpPrev" aria-label="${esc(t('rpPrev'))}">◀</button>
+          <button class="btn primary" id="rpPlay" aria-label="${esc(t('rpPlay'))}">▶</button>
+          <button class="btn" id="rpNext" aria-label="${esc(t('rpNext'))}">▶▶</button>
+          <button class="btn" id="rpLast" aria-label="${esc(t('rpLast'))}">⏭</button>
+        </div>
+        <input type="range" id="rpRange" min="0" max="${frames.length - 1}" value="0" aria-label="${esc(t('rpStep', { i: 1, n: frames.length }))}">
+        <p class="rp-count" id="rpCount"></p>
+      </div>
+      <div class="grid2 gap-top">
+        <div class="panel"><h2>${esc(t('rpProgress'))}</h2><p class="hint">${esc(t('rpProgressS'))}</p>
+          <div class="rp-chart" id="rpChart">${chartSVG(an.progress, frames.length, [bottom, top])}</div>
+          <div class="rp-legend"><span class="lg a">${esc(nameOf(bottom))}</span><span class="lg b">${esc(nameOf(top))}</span></div></div>
+        <div class="panel"><h2>${esc(t('rpMoments'))}</h2>
+          ${an.moments.length ? `<ol class="rp-moments">${an.moments.map(m => `<li><button type="button" data-i="${m.i}">
+            <span class="rp-when">${esc(t('rpTurn', { n: Math.max(1, frames[m.i].turn) }))}</span><span>${momentText(m)}</span></button></li>`).join('')}</ol>` : `<p>${esc(t('rpNoMoments'))}</p>`}</div>
+      </div>
+      <div class="panel gap-top"><h2>${esc(t('rpStats'))}</h2>
+        <table class="rp-stats"><thead><tr><th></th><th>${esc(nameOf(bottom))}</th><th>${esc(nameOf(top))}</th></tr></thead>
+        <tbody>${rows.map(([k, f]) => `<tr><td>${esc(t(k))}</td><td class="n">${st[bottom][f]}</td><td class="n">${st[top][f]}</td></tr>`).join('')}</tbody></table></div>
+    </div>`;
+    $('#rpFirst').onclick = () => rpGo(0);
+    $('#rpPrev').onclick = () => rpGo(rp.idx - 1);
+    $('#rpNext').onclick = () => rpGo(rp.idx + 1);
+    $('#rpLast').onclick = () => rpGo(frames.length - 1);
+    $('#rpPlay').onclick = () => rp.timer ? stopReplay() : startReplay();
+    $('#rpRange').oninput = e => { stopReplay(); rpGo(+e.target.value); };
+    main.querySelectorAll('.rp-moments button').forEach(b => b.onclick = () => { stopReplay(); rpGo(+b.dataset.i); window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' }); });
+    $('#rpChart').onclick = e => { const b = e.currentTarget.getBoundingClientRect(); stopReplay(); rpGo(Math.round((e.clientX - b.left) / b.width * (frames.length - 1))); };
+    rpGo(0);
+  }
+  function stopReplay() { if (rp?.timer) { clearInterval(rp.timer); rp.timer = null; const b = $('#rpPlay'); if (b) { b.textContent = '▶'; b.setAttribute('aria-label', t('rpPlay')); } } }
+  function startReplay() {
+    if (!rp) return;
+    if (rp.idx >= rp.frames.length - 1) rpGo(0);
+    rp.timer = setInterval(() => {
+      if (route() !== 'replay-' + rp.no) return stopReplay();
+      if (rp.idx >= rp.frames.length - 1) return stopReplay();
+      rpGo(rp.idx + 1);
+    }, 1000);
+    const b = $('#rpPlay'); b.textContent = '⏸'; b.setAttribute('aria-label', t('rpPause'));
+  }
+  window.addEventListener('keydown', e => {
+    if (!rp || route() !== 'replay-' + rp.no || /input|select|textarea/i.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') { stopReplay(); rpGo(rp.idx + (document.documentElement.dir === 'rtl' ? -1 : 1)); }
+    if (e.key === 'ArrowLeft') { stopReplay(); rpGo(rp.idx + (document.documentElement.dir === 'rtl' ? 1 : -1)); }
+    if (e.key === ' ') { e.preventDefault(); rp.timer ? stopReplay() : startReplay(); }
+  });
+  function stepText(f) {
+    const e = f.ev, who = e.by ? `<b>${esc(nameOf(e.by))}</b>` : '';
+    switch (e.type) {
+      case 'deal': return t('rpDeal', { name: `<b>${esc(nameOf(rp.r.players.find(p => p !== e.by) || e.by))}</b>`, starter: who });
+      case 'draw': return e.source === 'discard' ? t('rpTookPile', { who, card: labelHTML(e.card) }) : t('rpDrewDeck', { who, card: labelHTML(e.card) });
+      case 'discard': return t('rpThrew', { who, card: labelHTML(e.card) });
+      case 'rami': return t('rpRami', { who });
+      case 'resign': return t('rpResign', { who });
+      case 'reshuffle': return t('rpReshuffle');
+    }
+    return '';
+  }
+  function momentText(m) {
+    const n = id => `<b>${esc(nameOf(id))}</b>`, c = m.card ? labelHTML(m.card) : '';
+    switch (m.kind) {
+      case 'joker': return t('mJoker', { who: n(m.by) });
+      case 'missedRami': return t('mMissed', { by: n(m.by), to: n(m.to), card: c });
+      case 'gaveWin': return t('mGaveWin', { by: n(m.by), to: n(m.to), card: c });
+      case 'satOn': return t('mSatOn', { by: n(m.by), to: n(m.to), card: c });
+      case 'win': return m.card ? t(m.source === 'discard' ? 'mWinPile' : 'mWinDeck', { by: n(m.by), card: c, n: m.turns }) : t('mWin', { by: n(m.by), n: m.turns });
+      case 'resign': return t('mResign', { by: n(m.by) });
+    }
+    return '';
+  }
+  function chartSVG(progress, total, [a, b]) {
+    const W = 600, H = 170, P = 10, X = i => P + i / Math.max(1, total - 1) * (W - 2 * P), Y = v => H - P - v / 15 * (H - 2 * P);
+    const line = (pts, cls) => `<polyline class="${cls}" vector-effect="non-scaling-stroke" points="${[...pts, { i: total - 1, v: pts[pts.length - 1].v }].map(p => `${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ')}"/>`;
+    const grid = [5, 10, 14].map(v => `<line class="grid" vector-effect="non-scaling-stroke" x1="${P}" x2="${W - P}" y1="${Y(v)}" y2="${Y(v)}"/>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-hidden="true">${grid}${line(progress[a], 'pa')}${line(progress[b], 'pb')}
+      <line id="rpMark" class="mark" vector-effect="non-scaling-stroke" x1="${X(0)}" x2="${X(0)}" y1="0" y2="${H}"/></svg>
+      <span class="rp-y y14">14</span><span class="rp-y y0">0</span>`;
+  }
+  function rpGo(i) {
+    if (!rp) return;
+    const { frames, r } = rp;
+    i = Math.max(0, Math.min(frames.length - 1, i));
+    rp.idx = i;
+    const f = frames[i], e = f.ev;
+    const hand = p => {
+      const ids = sortCards(f.hands[p], sortBy());
+      const lay = bestMelds(ids, r.rules);
+      const n = lay.melds.reduce((k, m) => k + m.cards.length, 0);
+      const cls = id => (e.type === 'draw' && e.by === p && id === e.card ? 'hl-in' : '');
+      const groups = lay.melds.map(m => `<div class="group meld-${m.type}"><div class="group-cards">${m.cards.map(c => cardHTML(c, cls(c))).join('')}</div></div>`).join('')
+        + (lay.loose.length ? `<div class="group loose"><div class="group-cards">${lay.loose.map(c => cardHTML(c, cls(c))).join('')}</div></div>` : '');
+      const active = e.by === p && e.type !== 'reshuffle';
+      return `<div class="rp-hand${active ? ' active' : ''}"><div class="rp-who"><b>${esc(nameOf(p))}</b><span>${esc(t('rpInMelds', { c: n }))} · ${esc(t('cardsN', { n: f.hands[p].length }))}</span></div>
+        <div class="hand rp-cards">${groups}</div></div>`;
+    };
+    const top = f.pile[f.pile.length - 1];
+    const outCls = (e.type === 'discard' || e.type === 'rami') ? 'hl-out' : '';
+    $('#rpBoard').innerHTML = `${hand(rp.top)}
+      <div class="rp-center"><div class="pile"><div class="card back"></div><small>${esc(t('deck'))} · ${f.deck}</small></div>
+        <p class="rp-text">${stepText(f)}</p>
+        <div class="pile">${cardHTML(top, outCls)}<small>${esc(t('discard'))} · ${f.pile.length}</small></div></div>
+      ${hand(rp.bottom)}`;
+    $('#rpRange').value = i;
+    $('#rpCount').textContent = `${t('rpStep', { i: i + 1, n: frames.length })} · ${t('rpTurn', { n: Math.max(1, f.turn + (e.type === 'deal' ? 1 : 0)) })}`;
+    const mark = $('#rpMark'); if (mark) { const x = 10 + i / Math.max(1, frames.length - 1) * 580; mark.setAttribute('x1', x); mark.setAttribute('x2', x); }
+    if (i > 0 && (e.type === 'draw' || e.type === 'discard')) sfx[e.type === 'draw' ? 'flip' : 'throw']();
+    if (e.type === 'rami') sfx.win();
   }
 
   // ---------- stats ----------
@@ -689,13 +830,37 @@
 
   // ---------- history ----------
   function renderHistory() {
-    const rows = S.history.map(h => { const d = new Date(h.endedAt); return `<tr>
-      <td class="n">${h.no}</td><td>${d.toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}<br><small>${d.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}</small></td>
-      <td><b>${esc(nameOf(h.winner))}</b> <span class="badge ${h.result === 'rami' ? 'rami' : ''}">${esc(h.result === 'rami' ? t('badgeRami') : t('badgeResign'))}</span></td>
-      <td class="n">${h.turns}</td>
-      <td><div class="hand-mini">${(h.melds || []).flatMap(m => m.cards).map(c => cardHTML(c, 'mini')).join('')}</div></td></tr>`; }).join('');
-    $('#main').innerHTML = `<h1 class="page-title">${esc(t('historyTitle'))}</h1><div class="panel">${rows ? `<div class="scroll"><table class="hist">
-      <thead><tr><th>#</th><th>${esc(t('colWhen'))}</th><th>${esc(t('colWinner'))}</th><th>${esc(t('colTurns'))}</th><th>${esc(t('colHand'))}</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p>${esc(t('noHistory'))}</p>`}</div>`;
+    const mini = c => cardHTML(c, 'mini');
+    const meldRow = (melds, loose) => melds.map(m => `<div class="meld meld-${m.type}">${m.cards.map(mini).join('')}</div>`).join('')
+      + (loose && loose.length ? `<div class="meld meld-loose">${loose.map(mini).join('')}</div>` : '');
+    const laid = (hand, rules) => { const l = bestMelds(sortCards(hand, sortBy()), rules); return meldRow(l.melds, l.loose); };
+    const cards = S.history.map(h => {
+      const d = new Date(h.endedAt), loser = h.players.find(p => p !== h.winner);
+      const winHTML = h.melds ? meldRow(h.melds) : h.winnerHand ? laid(h.winnerHand, h.rules) : '';
+      const loseHTML = h.loserHand ? laid(h.loserHand, h.rules) : '';
+      const mins = h.startedAt && h.endedAt ? Math.max(1, Math.round((h.endedAt - h.startedAt) / 60000)) : null;
+      return `<article class="hc">
+        <header class="hc-head"><span class="hc-no">#${h.no}</span>
+          <span class="hc-title"><b>${esc(t('hcWon', { name: nameOf(h.winner) }))}</b> <span class="badge ${h.result === 'rami' ? 'rami' : ''}">${esc(h.result === 'rami' ? t('badgeRami') : t('badgeResign'))}</span></span>
+          <span class="hc-meta">${esc(t('turnsN', { n: h.turns }))} · ${d.toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}</span></header>
+        <div class="hc-hands">
+          <div class="hc-side win"><span class="hc-label">${esc(nameOf(h.winner))} · ${esc(t('hcWinner'))}</span><div class="melds">${winHTML}</div></div>
+          ${loser ? `<div class="hc-side"><span class="hc-label">${esc(nameOf(loser))}</span><div class="melds">${loseHTML}</div></div>` : ''}
+        </div>
+        <details class="hc-more"><summary>${esc(t('hcMore'))}</summary>
+          <div class="hc-more-body">
+            <dl class="kv">
+              ${h.starter ? `<dt>${esc(t('hcStarted'))}</dt><dd>${esc(nameOf(h.starter))}</dd>` : ''}
+              <dt>${esc(t('colWhen'))}</dt><dd>${d.toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}</dd>
+              ${mins ? `<dt>${esc(t('hcLength'))}</dt><dd>${esc(t('hcMinutes', { n: mins }))}</dd>` : ''}
+              <dt>${esc(t('colTurns'))}</dt><dd>${h.turns}</dd>
+              ${h.rules ? `<dt class="full">${esc(t('houseRules'))}</dt><dd class="full">${esc(rulesSummary({ minSwivi: 1, minTirci: 1, ...h.rules }))}</dd>` : ''}
+            </dl>
+            ${h.replay ? `<a class="btn primary" href="#replay-${h.no}">▶ ${esc(t('watchReplay'))}</a>` : `<p class="hint">${esc(t('noReplay'))}</p>`}
+          </div></details>
+      </article>`;
+    }).join('');
+    $('#main').innerHTML = `<h1 class="page-title">${esc(t('historyTitle'))}</h1>${cards ? `<div class="hc-list">${cards}</div>` : `<div class="panel"><p>${esc(t('noHistory'))}</p></div>`}`;
   }
 
   // ---------- settings ----------
@@ -818,7 +983,7 @@
 
   // ---------- start ----------
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  window.addEventListener('hashchange', () => { sel = null; render(); });
+  window.addEventListener('hashchange', () => { sel = null; if (!route().startsWith('replay-')) { stopReplay(); rp = null; } render(); });
   fetch('/api/state').then(r => r.ok ? r.json() : null).then(s => {
     if (!s) return renderLogin();
     S = s;
