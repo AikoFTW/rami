@@ -173,6 +173,8 @@ async function api(req, res, url) {
   }
 
   if (route === 'GET /api/public') return send(res, 200, { signupOpen: Object.keys(db.users).length < MAX_USERS });
+  // Quick check from anywhere: is the app saving to MongoDB? Shows no data.
+  if (route === 'GET /api/health') return send(res, 200, { ok: true, storage: mongoUri() ? 'mongodb' : 'file', accounts: Object.keys(db.users).length });
 
   if (route === 'POST /api/signup') {
     if (Object.keys(db.users).length >= MAX_USERS) return send(res, 403, { error: 'Sign-up is closed. Both players already have accounts.', code: 'signupClosed' });
