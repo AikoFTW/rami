@@ -124,6 +124,7 @@ function cleanPrefs(p) {
   if (['auto', 'light', 'dark'].includes(p.theme)) out.theme = p.theme;
   if (['en', 'ar', 'fr'].includes(p.lang)) out.lang = p.lang;
   if (typeof p.groupMelds === 'boolean') out.groupMelds = p.groupMelds;
+  if (['suit', 'rank'].includes(p.sortBy)) out.sortBy = p.sortBy;
   return out;
 }
 

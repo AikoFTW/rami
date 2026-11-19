@@ -378,3 +378,26 @@ select.lang { color: #f6efe2 }
   .chip-cards .card { --card-w: 26px }
   .chip-cards .card .tl { font-size: 9px }
 }
+
+/* ---------- simpler controls ---------- */
+.seg { display: inline-flex; border-radius: 999px; padding: 3px; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.25) }
+.seg-btn { min-height: 42px; min-width: 52px; padding: 6px 12px; border: 0; border-radius: 999px; background: none; color: #f6efe2; font-weight: 700; font-size: 16px;
+  transition: background-color .2s, color .2s }
+.seg-btn.on { background: #f6efe2; color: #1d1d1d }
+.actions .btn.wide { flex: 1 1 180px; max-width: 320px }
+.hand .card.new::after { content: ''; position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--saffron); box-shadow: 0 0 0 2px #fffdf8 }
+.joker-panel summary { cursor: pointer; font-weight: 600; font-size: 16px; list-style: none; min-height: 32px; display: flex; align-items: center; gap: 8px }
+.joker-panel summary::-webkit-details-marker { display: none }
+.joker-panel summary::after { content: '▾'; margin-inline-start: auto; transition: transform .2s }
+.joker-panel[open] summary::after { transform: rotate(180deg) }
+.joker-panel[open] .chips { margin-top: 8px }
+@media (max-width: 720px) {
+  .actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px }
+  .actions .btn.wide { flex: 1 1 0; max-width: none }
+  .actions .btn { flex: 1 1 0 }
+  .seg { flex: none }
+  .seg-btn { min-width: 46px; padding: 6px 8px; font-size: 15px }
+  .hand-wrap .hint { display: block; font-size: 14px; margin-top: 8px }
+}
+.status .win-now { color: var(--saffron) }

@@ -12,9 +12,7 @@
 
   let S = null;            // last state from the server
   let sel = null;          // selected card id
-  let dragId = null;
   let wasMyTurn = false;
-  let reorderTimer = null;
   let lastRoute = null;
   let pins = {}, pinsGame = null;   // where the player chose to put each joker, per game
 
@@ -99,12 +97,6 @@
       return by === 'rank' ? [c.r, 'SHDC'.indexOf(c.s)] : ['SHDC'.indexOf(c.s), c.r]; };
     return [...cards].sort((a, b) => { const x = key(a), y = key(b); return x[0] - y[0] || x[1] - y[1]; });
   }
-  function sendOrder(order) {
-    S.game.myHand = order; renderPlay();
-    clearTimeout(reorderTimer);
-    reorderTimer = setTimeout(() => move({ type: 'reorder', order }), 400);
-  }
-
   function applyPrefs() {
     const p = S?.me.prefs || {};
     const root = document.documentElement;
@@ -257,17 +249,17 @@
   function savePins() { try { localStorage.setItem('rami-pins-' + pinsGame, JSON.stringify(pins)); } catch {} }
 
   // Splits the hand into what's shown: meld groups, loose cards, and the card just drawn.
+  const sortBy = () => S.me.prefs?.sortBy === 'rank' ? 'rank' : 'suit';
   function layoutHand(g, over) {
     loadPins(g.no);
-    const hand = g.myHand || [];
+    const hand = sortCards(g.myHand || [], sortBy());
     const myTurn = !over && g.turn === me();
     const drawn = myTurn && g.phase === 'discard' && g.lastDrawn && hand.includes(g.lastDrawn) ? g.lastDrawn : null;
-    const base = hand.filter(id => id !== drawn);
     const grouped = S.me.prefs?.groupMelds !== false;
-    if (!grouped) return { hand, drawn, base, grouped, melds: [], loose: base, pool: base };
+    if (!grouped) return { hand, drawn, grouped, melds: [], loose: hand, pool: hand };
 
     // the player's own joker choices go first
-    let pool = base.slice();
+    let pool = hand.slice();
     const pinned = [], kept = [];
     for (const [jid, pin] of Object.entries(pins)) {
       if (!pool.includes(jid)) continue;
@@ -278,21 +270,27 @@
       pinned.push({ type: pin.type, cards, pinned: true });
     }
     const auto = bestMelds(pool, g.rules);
-    auto.melds.sort((x, y) => base.indexOf(x.cards[0]) - base.indexOf(y.cards[0]));
+    // melds in the same order as the sort: by their first real card
+    const firstReal = m => hand.indexOf(m.cards.find(c => !parse(c).joker) || m.cards[0]);
+    auto.melds.sort((x, y) => firstReal(x) - firstReal(y));
     const looseSet = new Set([...auto.loose, ...kept]);
-    return { hand, drawn, base, grouped, melds: [...pinned, ...auto.melds], loose: base.filter(x => looseSet.has(x)), pool };
+    return { hand, drawn, grouped, melds: [...pinned, ...auto.melds], loose: hand.filter(x => looseSet.has(x)), pool };
   }
-  // Card order to save after a change: melds first, then loose cards, then the new card.
-  const fullOrder = (L, loose) => [...L.melds.flatMap(m => m.cards), ...loose, ...(L.drawn ? [L.drawn] : [])];
 
   // What a card would do for the hand: a short sentence plus a small preview.
   function potentialHTML(title, base, card, rules, gives) {
     const p = cardPotential(base, card, rules);
     let msg, preview = '';
+    const list = ids => ids.map(label).join(' ');
+    const meldList = m => m.cards.map((c, i) => {
+      if (!parse(c).joker) return label(c);
+      const as = jokerStandsFor(m, i);
+      return as ? `${t('joker')} (${m.type === 'tirci' ? RANK(as.r) : shortCard(as)})` : t('joker');
+    }).join(' ');
     if (gives) msg = t('potRami');
-    else if (p.meld && p.gain > 0) msg = t('potJoins', { type: t(p.meld.type), n: p.gain });
+    else if (p.meld && p.gain > 0) msg = t('potJoins', { type: t(p.meld.type), cards: meldList(p.meld) });
     else if (p.meld) msg = t('potSame', { type: t(p.meld.type) });
-    else if (p.partners.length) msg = t('potPartner', { cards: p.partners.map(x => label(x.id)).join(', '), type: t(p.partners[0].type) });
+    else if (p.partners.length) msg = t('potPartner', { cards: list(p.partners.map(x => x.id)), type: t(p.partners[0].type) });
     else msg = t('potNothing');
     if (p.meld) preview = `<div class="meld meld-${p.meld.type}">${p.meld.cards.map(c => cardHTML(c, 'mini' + (c === card ? ' hi' : ''))).join('')}</div>`;
     else if (p.partners.length) preview = `<div class="meld">${[card, ...p.partners.map(x => x.id)].map(c => cardHTML(c, 'mini' + (c === card ? ' hi' : ''))).join('')}</div>`;
@@ -308,8 +306,8 @@
     const chip = (key, text, cardsHTML, active) => `<button class="chip${active ? ' on' : ''}" data-pin="${key}">${esc(text)}${cardsHTML ? `<span class="chip-cards">${cardsHTML}</span>` : ''}</button>`;
     const list = opts.map((o, i) => chip(i, o.type === 'tirci' ? t('jokerTirci', { rank: RANK(o.stands.r) }) : t('jokerAs', { card: shortCard(o.stands) }),
       o.cards.map(c => cardHTML(c === 'JOKER' ? jid : c, 'mini')).join(''), same(o))).join('');
-    return { html: `<div class="joker-panel"><b>${esc(t('jokerTitle'))}</b><div class="chips">
-      ${chip('auto', t('jokerAuto'), '', !cur)}${chip('loose', t('jokerLoose'), '', cur === 'loose')}${list}</div></div>`, opts };
+    return { html: `<details class="joker-panel"><summary>${esc(t('jokerTitle'))}</summary><div class="chips">
+      ${chip('auto', t('jokerAuto'), '', !cur)}${chip('loose', t('jokerLoose'), '', cur === 'loose')}${list}</div></details>`, opts };
   }
 
   // ---------- smooth card movement (FLIP: measure, change, play the difference) ----------
@@ -370,16 +368,16 @@
     // Which throws would win right now?
     const winners = canDiscard ? L.hand.filter(x => findRami(L.hand.filter(y => y !== x), g.rules)) : [];
     const placed = L.melds.reduce((n, m) => n + m.cards.length, 0);
-    const cls = id => `${id === sel ? 'sel' : ''} ${winners.includes(id) && sel !== id ? 'win-throw' : ''}`;
+    const cls = id => `${id === sel ? 'sel' : ''} ${id === L.drawn ? 'new' : ''}`;
 
     // What the new card (or the card on the pile) would do for you
     let potential = '';
     if (!over && canDiscard && L.drawn)
-      potential = potentialHTML(t('potTitle', { card: label(L.drawn) }), L.base, L.drawn, g.rules, winners.some(x => x !== L.drawn));
+      potential = potentialHTML(t('potTitle', { card: label(L.drawn) }), L.hand.filter(x => x !== L.drawn), L.drawn, g.rules, winners.some(x => x !== L.drawn));
     else if (!over && canPickup) {
       const withTop = [...L.hand, g.discardTop];
       const gives = L.hand.some(x => findRami(withTop.filter(y => y !== x), g.rules));
-      potential = potentialHTML(t('potPreview', { card: label(g.discardTop) }), L.base, g.discardTop, g.rules, gives);
+      potential = potentialHTML(t('potPreview', { card: label(g.discardTop) }), L.hand, g.discardTop, g.rules, gives);
     }
 
     const groupHTML = m => `<div class="group meld-${m.type}${m.pinned ? ' pinned' : ''}"><span class="group-label">${esc(t(m.type))}${m.pinned ? ` · ${esc(t('pinned'))}` : ''}</span>
@@ -390,9 +388,7 @@
     const meldGroups = L.melds.map(groupHTML).join('');
     const looseGroup = L.loose.length ? `<div class="group loose">${L.grouped ? `<span class="group-label">${esc(t('loose'))}</span>` : ''}
       <div class="group-cards">${L.loose.map(id => cardHTML(id, cls(id), 'button')).join('')}</div></div>` : '';
-    const drawnSlot = L.drawn ? `<div class="group drawn"><span class="group-label">${esc(t('newCard'))}</span>
-      <div class="group-cards">${cardHTML(L.drawn, cls(L.drawn), 'button')}</div></div>` : '';
-    const jp = sel && L.grouped && !over && parse(sel).joker && sel !== L.drawn ? jokerPanelHTML(L, g, sel) : null;
+    const jp = sel && L.grouped && !over && parse(sel).joker ? jokerPanelHTML(L, g, sel) : null;
 
     main.innerHTML = `${banner}${scoreboard(g)}<div class="layout"><div>
       <div class="table">
@@ -400,21 +396,22 @@
           <div class="backs">${over ? '' : Array.from({ length: Math.min(g.counts[oppId], 16) }, back).join('')}</div></div>
         <div class="row center">
           <button class="pile ${canDraw ? 'can' : ''}" id="deck" ${canDraw ? '' : 'disabled'} aria-label="${esc(t('deck'))}">${g.deckCount ? back() : '<div class="empty-slot"></div>'}<small>${esc(t('deck'))} · ${g.deckCount}</small></button>
-          <div class="status">${over ? `<b>${g.winner === me() ? esc(t('youWon')) : esc(t('xWon', { name: nameOf(g.winner) }))}</b>` : statusText(g, oppId)}</div>
+          <div class="status">${over ? `<b>${g.winner === me() ? esc(t('youWon')) : esc(t('xWon', { name: nameOf(g.winner) }))}</b>` : winners.length ? `<b class="win-now">${esc(t('haveRami'))}</b>` : statusText(g, oppId)}</div>
           <button class="pile ${canPickup ? 'can' : ''}" id="pile" ${canPickup ? '' : 'disabled'} aria-label="${esc(t('discard'))}">${cardHTML(g.discardTop)}<small>${esc(t('discard'))} · ${g.discardCount}</small></button>
         </div>
         ${potential}
         <div class="hand-wrap">
-          ${L.grouped && !over ? `<p class="meld-summary">${esc(t('meldsSummary', { m: L.melds.length, c: placed, n: L.base.length }))}</p>` : ''}
-          ${winners.length ? `<p class="rami-ready">${esc(t('haveRami'))}</p>` : ''}
-          <div class="hand" id="hand">${meldGroups}${looseGroup}${drawnSlot}</div>
+          ${L.grouped && !over ? `<p class="meld-summary">${esc(placed ? t('meldsSummary', { c: placed, n: L.hand.length }) : t('meldsNone'))}</p>` : ''}
+          <div class="hand" id="hand">${meldGroups}${looseGroup}</div>
           ${jp ? jp.html : ''}
           ${over ? '' : `<div class="actions">
-            <button class="btn sort" id="sortSuit" title="${esc(t('sortSuit'))}" aria-label="${esc(t('sortSuit'))}"><span class="ic" aria-hidden="true">♠♥</span><span class="lbl">${esc(t('sortSuit'))}</span></button>
-            <button class="btn sort" id="sortRank" title="${esc(t('sortRank'))}" aria-label="${esc(t('sortRank'))}"><span class="ic" aria-hidden="true">A‑K</span><span class="lbl">${esc(t('sortRank'))}</span></button>
-            <button class="btn" id="discard" ${canDiscard && sel ? '' : 'disabled'}>${esc(sel ? t('throwX', { card: label(sel) }) : t('throwCard'))}</button>
-            <button class="btn primary ${winners.length ? 'pulse' : ''}" id="declare" ${canDiscard && sel ? '' : 'disabled'}>${esc(t('declare'))}</button></div>
-          <p class="hint">${esc(t('hintTap'))}</p>`}
+            <div class="seg" role="group" aria-label="${esc(t('sortLabel'))}">
+              <button class="seg-btn${sortBy() === 'suit' ? ' on' : ''}" id="sortSuit" aria-pressed="${sortBy() === 'suit'}" title="${esc(t('sortSuit'))}">♠♥</button>
+              <button class="seg-btn${sortBy() === 'rank' ? ' on' : ''}" id="sortRank" aria-pressed="${sortBy() === 'rank'}" title="${esc(t('sortRank'))}">A‑K</button>
+            </div>
+            ${winners.length ? `<button class="btn primary pulse wide" id="declare">${esc(t('declare'))}</button>` : ''}
+            <button class="btn ${winners.length ? '' : 'wide'}" id="discard" ${canDiscard && sel ? '' : 'disabled'}>${esc(sel ? t('throwX', { card: label(sel) }) : t('throwCard'))}</button></div>
+          ${canDiscard && !winners.length ? `<p class="hint">${esc(t('hintTap'))}</p>` : ''}`}
         </div>
       </div>
       ${over ? resultPanel(g, oppId) : ''}
@@ -427,10 +424,11 @@
     $('#pile').addEventListener('click', () => move({ type: 'draw', source: 'discard' }));
     if (over) { $('#again')?.addEventListener('click', deal); return; }
     $('#resign').addEventListener('click', resign);
-    $('#sortSuit').addEventListener('click', () => sendOrder(fullOrder(L, sortCards(L.loose, 'suit'))));
-    $('#sortRank').addEventListener('click', () => sendOrder(fullOrder(L, sortCards(L.loose, 'rank'))));
+    $('#sortSuit').addEventListener('click', () => setSort('suit'));
+    $('#sortRank').addEventListener('click', () => setSort('rank'));
     $('#discard').addEventListener('click', () => move({ type: 'discard', card: sel }));
-    $('#declare').addEventListener('click', () => move({ type: 'declare', card: sel }));
+    // one tap wins: throw the card you picked if it works, otherwise the one that does
+    $('#declare')?.addEventListener('click', () => move({ type: 'declare', card: winners.includes(sel) ? sel : winners[0] }));
     if (jp) main.querySelectorAll('.joker-panel .chip').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.pin;
       if (k === 'auto') delete pins[sel];
@@ -438,31 +436,19 @@
       else { const o = jp.opts[+k]; pins[sel] = { type: o.type, cards: o.cards }; }
       savePins(); sel = null; renderPlay();
     }));
-    bindHand(L);
+    bindHand();
   }
 
-  // Any card can be selected. Loose cards can be rearranged; melds arrange themselves.
-  function bindHand(L) {
-    const isLoose = id => L.loose.includes(id);
-    const moveTo = (id, target) => {
-      const loose = L.loose.filter(x => x !== id);
-      loose.splice(loose.indexOf(target), 0, id);
-      sendOrder(fullOrder(L, loose));
-    };
-    $('#hand').querySelectorAll('.card').forEach(c => {
-      const id = c.dataset.id;
-      c.addEventListener('click', () => {
-        if (sel && sel !== id && isLoose(sel) && isLoose(id)) { const s = sel; sel = null; moveTo(s, id); return; }
-        sel = sel === id ? null : id; renderPlay();
-      });
-      if (!isLoose(id)) return;
-      c.draggable = true;
-      c.addEventListener('dragstart', e => { dragId = id; c.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
-      c.addEventListener('dragend', () => { dragId = null; c.classList.remove('dragging'); });
-      c.addEventListener('dragover', e => { if (dragId && dragId !== id) { e.preventDefault(); c.classList.add('drag-over'); } });
-      c.addEventListener('dragleave', () => c.classList.remove('drag-over'));
-      c.addEventListener('drop', e => { e.preventDefault(); c.classList.remove('drag-over'); if (dragId && dragId !== id) moveTo(dragId, id); });
-    });
+  // Tapping a card selects it (tap again to unselect). The hand sorts itself.
+  function bindHand() {
+    $('#hand').querySelectorAll('.card').forEach(c => c.addEventListener('click', () => {
+      sel = sel === c.dataset.id ? null : c.dataset.id; renderPlay();
+    }));
+  }
+  function setSort(by) {
+    if (sortBy() === by) return;
+    S.me.prefs = { ...S.me.prefs, sortBy: by }; renderPlay();
+    call('/api/prefs', { prefs: { sortBy: by } }).catch(() => {});
   }
 
   function resultPanel(g, oppId) {
