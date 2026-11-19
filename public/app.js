@@ -188,7 +188,7 @@
   // ---------- login ----------
   async function renderLogin(err = '', mode) {
     if (es) { es.close(); es = null; }
-    shellKey = null; lastRoute = null;
+    shellKey = null; lastRoute = null; app.classList.remove('shell');
     const pub = await fetch('/api/public').then(r => r.json()).catch(() => ({}));
     if (!pub.signupOpen) mode = 'in';
     mode = mode || 'in';
@@ -259,10 +259,11 @@
       };
       const links = ['play', 'stats', 'history', 'settings']
         .map(k => `<a href="#${k}"${r === k || (k === 'history' && r.startsWith('replay-')) ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icons[k]}</svg><span>${esc(t(k))}</span></a>`).join('');
+      app.classList.add('shell');
       app.innerHTML = `<header class="top">
         <a class="brand" href="#play"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 8l6 10 11-3-3 11 10 6-10 6 3 11-11-3-6 10-6-10-11 3 3-11-10-6 10-6-3-11 11 3z"/></svg>Rami</a>
-        <nav class="tabs">${links}</nav>
-        <span class="who">${S.me.prefs?.zlayji ? `<span class="zl-flag" title="Dima Maghrib" aria-hidden="true">${FLAG}</span>` : ''}${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
+        <nav class="tabs tabs-top">${links}</nav>
+        <span class="who">${S.me.prefs?.zlayji ? `<span class="zl-flag" title="Dima Maghrib" aria-hidden="true">${FLAG}</span>` : ''}${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main><nav class="tabs tabs-bottom">${links}</nav>`;
       $('#out').addEventListener('click', async () => { await call('/api/logout', {}).catch(() => {}); S = null; shellKey = null; renderLogin(); });
       $('#topLang').addEventListener('change', e => { setLang(e.target.value, true); render(); });
     }
@@ -408,32 +409,50 @@
     const r = q => { const e = document.querySelector(q); if (!e) return null; const b = e.getBoundingClientRect(); return b.width ? b : null; };
     return { m, deck: r('#deck .card') || r('#deck') || r('#deal'), pile: r('#pile .card') || r('#pile'), opp: r('.backs') || r('.opp-name'), sel, ...seen };
   }
+  // Layering several animations on one card ('add') lets each axis have its own easing,
+  // which gives smooth curves. Older browsers without it get one combined animation.
+  const canAdd = (() => { try { const a = document.createElement('div').animate([], { composite: 'add' }); const ok = a.effect?.composite === 'add'; a.cancel(); return ok; } catch { return false; } })();
   function animate(el, frames, opts) {
-    try { return el.animate(frames, { composite: 'add', fill: 'backwards', ...opts }); }
-    catch { return el.animate(frames, { fill: 'backwards', ...opts }); }   // very old browsers
+    return el.animate(frames, canAdd ? { composite: 'add', fill: 'backwards', ...opts } : { fill: 'backwards', ...opts });
+  }
+  const EASE_OUT = 'cubic-bezier(.22,1,.36,1)';        // quick start, long soft landing
+  const EASE_INOUT = 'cubic-bezier(.45,0,.25,1)';
+  const ARC_Y = 'cubic-bezier(.55,0,.35,1)';            // vertical lags behind horizontal: the path curves
+  function settle(el, anims) {
+    el.style.willChange = 'transform';
+    Promise.all(anims.map(a => a.finished.catch(() => {}))).then(() => { el.style.willChange = ''; });
   }
   // A card flying in face down that turns over on the way (from the deck, or from her side).
-  function flyIn(el, from, delay = 0, dur = 600) {
+  function flyIn(el, from, delay = 0, dur = 640) {
     const a = center(from), b = center(el.getBoundingClientRect());
-    const dx = a.x - b.x, dy = a.y - b.y, lift = Math.min(60, 20 + Math.abs(dx) * 0.08);
+    const dx = a.x - b.x, dy = a.y - b.y;
     el.classList.add('flipping'); el.style.setProperty('--flip-ms', dur + 'ms'); el.style.setProperty('--flip-delay', delay + 'ms');
-    const anim = animate(el, [
-      { transform: `${P}translate(${dx}px,${dy}px) rotateY(180deg) rotate(-6deg) scale(.82)`, opacity: .9 },
-      { transform: `${P}translate(${dx * .35}px,${dy * .35 - lift}px) rotateY(70deg) rotate(3deg) scale(1.06)`, opacity: 1, offset: .55 },
-      { transform: `${P}translate(0px,0px) rotateY(0deg) rotate(0deg) scale(1)`, opacity: 1 },
-    ], { duration: dur, delay, easing: 'cubic-bezier(.33,.6,.3,1)' });
-    anim.onfinish = anim.oncancel = () => el.classList.remove('flipping');
+    let anims;
+    if (canAdd) anims = [
+      animate(el, [{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0px)' }], { duration: dur, delay, easing: EASE_OUT }),
+      animate(el, [{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0px)' }], { duration: dur, delay, easing: ARC_Y }),
+      animate(el, [{ transform: 'perspective(700px) rotateY(180deg) scale(.86)' }, { transform: 'perspective(700px) rotateY(0deg) scale(1)' }], { duration: dur, delay, easing: 'cubic-bezier(.35,.15,.3,1)' }),
+      animate(el, [{ transform: 'rotate(-7deg)', easing: EASE_INOUT }, { transform: 'rotate(2deg)', offset: .6, easing: EASE_INOUT }, { transform: 'rotate(0deg)' }], { duration: dur, delay }),
+    ];
+    else anims = [animate(el, [
+      { transform: `${P}translate(${dx}px,${dy}px) rotateY(180deg) scale(.86)` },
+      { transform: `${P}translate(0px,0px) rotateY(0deg) scale(1)` }], { duration: dur, delay, easing: EASE_OUT })];
+    settle(el, anims);
+    Promise.all(anims.map(x => x.finished.catch(() => {}))).then(() => el.classList.remove('flipping'));
   }
-  // A card that already exists moving somewhere: a hop if it goes far (to or from the pile).
+  // A card that already exists moving somewhere. Far moves (to or from the pile) lift and tilt on the way.
   function travel(el, dx, dy, far) {
-    if (far) animate(el, [
-      { transform: `translate(${dx}px,${dy}px) rotate(0deg) scale(1)` },
-      { transform: `translate(${dx * .45}px,${dy * .45 - 46}px) rotate(${dx > 0 ? -8 : 8}deg) scale(1.1)`, offset: .45 },
-      { transform: 'translate(0px,0px) rotate(0deg) scale(.96)', offset: .82 },
-      { transform: 'translate(0px,0px) rotate(0deg) scale(1)' },
-    ], { duration: 600, easing: 'cubic-bezier(.25,.45,.35,1)' });
-    else animate(el, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0px,0px)' }],
-      { duration: 380, easing: 'cubic-bezier(.34,1.25,.64,1)' });
+    let anims;
+    if (!canAdd) anims = [animate(el, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0px,0px)' }], { duration: far ? 560 : 420, easing: EASE_OUT })];
+    else if (far) {
+      const dur = 580, tilt = dx > 0 ? -8 : 8;
+      anims = [
+        animate(el, [{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0px)' }], { duration: dur, easing: EASE_OUT }),
+        animate(el, [{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0px)' }], { duration: dur, easing: ARC_Y }),
+        animate(el, [{ transform: 'rotate(0deg) scale(1)', easing: EASE_INOUT }, { transform: `rotate(${tilt}deg) scale(1.08)`, offset: .45, easing: EASE_INOUT }, { transform: 'rotate(0deg) scale(1)' }], { duration: dur }),
+      ];
+    } else anims = [animate(el, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0px,0px)' }], { duration: 420, easing: EASE_OUT })];
+    settle(el, anims);
   }
   // A plain card back gliding across the table (her draws and pick-ups).
   function ghost(from, to, delay = 0) {
