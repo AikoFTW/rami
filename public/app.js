@@ -114,8 +114,13 @@
   const back = () => `<div class="card back" aria-hidden="true"></div>`;
 
   function sortCards(cards, by) {
+    // An ace counts as 1 or 14. Sort it after the K when it goes with your Q/K of that suit,
+    // and before the 2 otherwise, so it sits next to the cards it belongs with.
+    const has = (s, r) => cards.some(id => { const c = parse(id); return !c.joker && c.s === s && c.r === r; });
+    const aceHigh = s => (has(s, 13) || has(s, 12)) && !(has(s, 2) || has(s, 3));
+    const rank = c => c.r === 1 && aceHigh(c.s) ? 14 : c.r;
     const key = id => { const c = parse(id); if (c.joker) return [9, 99];
-      return by === 'rank' ? [c.r, 'SHDC'.indexOf(c.s)] : ['SHDC'.indexOf(c.s), c.r]; };
+      return by === 'rank' ? [rank(c), 'SHDC'.indexOf(c.s)] : ['SHDC'.indexOf(c.s), rank(c)]; };
     return [...cards].sort((a, b) => { const x = key(a), y = key(b); return x[0] - y[0] || x[1] - y[1]; });
   }
   function applyPrefs() {
