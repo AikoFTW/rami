@@ -818,6 +818,7 @@
     if (!s) return renderLogin();
     S = s;
     if (S.me.prefs?.lang) setLang(S.me.prefs.lang);
+    else setLang(lang, true);   // save the language on screen, so notifications use it too
     applyPrefs(); render(); listen(); syncPush();
   }).catch(() => renderLogin(t('cantReach')));
 }
