@@ -318,3 +318,63 @@ select.lang { color: #f6efe2 }
   .score .p span:not(.num) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
   .page-title { margin-top: 0 }
 }
+
+/* ---------- phones: compact table ---------- */
+.btn.sort .ic { display: none }
+@media (max-width: 720px) {
+  :root { --card-w: 56px } .card-s { --card-w: 48px } .card-l { --card-w: 64px }
+  :root[lang=ar] body { line-height: 1.6 }
+
+  /* the opponent is just a name and a count */
+  .opp .backs { display: none }
+  .opp { justify-content: flex-start }
+
+  /* piles and status sit together */
+  .center { margin: 10px 0 8px; gap: 8px 24px }
+  .center .status { font-size: 17px }
+  .center .status .sub { display: none }
+  .pile .card, .pile .empty-slot { --card-w: 50px }
+
+  /* the hand overlaps like a real hand of cards; each corner stays visible */
+  .hand { gap: 8px 10px; min-height: 0 }
+  .group { padding: 2px 6px 6px; border-radius: 12px }
+  .group-label { font-size: 12px; min-height: 0; line-height: 1.5 }
+  .group-cards { flex-wrap: nowrap; gap: 0 }
+  .group-cards .card + .card { margin-left: calc(var(--card-w) * -0.46) }
+  .group.loose .group-cards { flex-wrap: wrap; row-gap: 6px; padding-left: calc(var(--card-w) * 0.46) }
+  .group.loose .group-cards .card { margin-left: calc(var(--card-w) * -0.46) }
+  .hand .card.sel { transform: translateY(-10px) }
+  .card .as { left: 3px; bottom: 3px; transform: none; font-size: 10px; padding: 0 4px }
+  .meld-summary { font-size: 14px; margin-bottom: 6px }
+  .rami-ready { font-size: 16px; margin-bottom: 6px }
+
+  /* what a card does: one compact strip */
+  .potential { flex-wrap: nowrap; gap: 10px; padding: 8px 10px; margin-bottom: 8px }
+  .potential .pot-text { flex: 1 1 auto; font-size: 15px; line-height: 1.35 }
+  .potential .pot-text b { font-size: 13px }
+  .potential .meld { padding: 4px; gap: 0 }
+  .potential .meld .card { --card-w: 30px }
+  .potential .meld .card + .card { margin-left: -12px }
+
+  /* four buttons in one row */
+  .actions { grid-template-columns: 52px 52px 1fr 1fr; gap: 6px; margin-top: 10px }
+  .actions .btn { min-height: 46px; padding: 6px; font-size: 15px; line-height: 1.2 }
+  .btn.sort .ic { display: inline; font-size: 15px; letter-spacing: -.02em }
+  .btn.sort .lbl { display: none }
+  .hand-wrap .hint { display: none }
+  .hand-wrap { padding: 8px 6px 10px }
+
+  .joker-panel { padding: 10px } .joker-panel > b { font-size: 15px }
+  .score { margin-bottom: 10px }
+  main { padding-top: 10px }
+}
+@media (max-width: 380px) { :root { --card-w: 50px } }
+@media (max-width: 720px) {
+  .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 4px; scroll-snap-type: x proximity;
+    margin-inline: -10px; padding-inline: 10px; scrollbar-width: none }
+  .chips::-webkit-scrollbar { display: none }
+  .chip { flex: none; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; min-height: 64px;
+    padding: 6px 10px; white-space: nowrap; scroll-snap-align: start }
+  .chip-cards .card { --card-w: 26px }
+  .chip-cards .card .tl { font-size: 9px }
+}

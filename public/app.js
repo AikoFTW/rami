@@ -410,8 +410,8 @@
           <div class="hand" id="hand">${meldGroups}${looseGroup}${drawnSlot}</div>
           ${jp ? jp.html : ''}
           ${over ? '' : `<div class="actions">
-            <button class="btn" id="sortSuit">${esc(t('sortSuit'))}</button>
-            <button class="btn" id="sortRank">${esc(t('sortRank'))}</button>
+            <button class="btn sort" id="sortSuit" title="${esc(t('sortSuit'))}" aria-label="${esc(t('sortSuit'))}"><span class="ic" aria-hidden="true">♠♥</span><span class="lbl">${esc(t('sortSuit'))}</span></button>
+            <button class="btn sort" id="sortRank" title="${esc(t('sortRank'))}" aria-label="${esc(t('sortRank'))}"><span class="ic" aria-hidden="true">A‑K</span><span class="lbl">${esc(t('sortRank'))}</span></button>
             <button class="btn" id="discard" ${canDiscard && sel ? '' : 'disabled'}>${esc(sel ? t('throwX', { card: label(sel) }) : t('throwCard'))}</button>
             <button class="btn primary ${winners.length ? 'pulse' : ''}" id="declare" ${canDiscard && sel ? '' : 'disabled'}>${esc(t('declare'))}</button></div>
           <p class="hint">${esc(t('hintTap'))}</p>`}
