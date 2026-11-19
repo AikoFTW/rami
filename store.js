@@ -93,9 +93,17 @@ class FileStore {
   async close() {}
 }
 
+// Accepts MONGODB_URI, mongoURI or MONGO_URI. The database name comes from MONGODB_DB,
+// then the name in the connection string (…mongodb.net/rami), then "rami".
+const mongoUri = () => process.env.MONGODB_URI || process.env.mongoURI || process.env.MONGO_URI;
+function dbNameFrom(uri) {
+  const m = /^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]+)/.exec(uri);
+  return m ? decodeURIComponent(m[1]) : null;
+}
 function openStore() {
-  if (process.env.MONGODB_URI) return new MongoStore(process.env.MONGODB_URI, process.env.MONGODB_DB || 'rami');
+  const uri = mongoUri();
+  if (uri) return new MongoStore(uri, process.env.MONGODB_DB || dbNameFrom(uri) || 'rami');
   return new FileStore(process.env.DATA_DIR || path.join(__dirname, 'data'));
 }
 
-module.exports = { openStore, summary };
+module.exports = { openStore, summary, mongoUri, dbNameFrom };

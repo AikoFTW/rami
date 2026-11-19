@@ -28,8 +28,8 @@ Open the site and both of you tap **Create an account**. Sign-up closes once bot
 | Variable | Default | |
 |---|---|---|
 | `PORT` | `3333` | Port to listen on |
-| `MONGODB_URI` | _none_ | MongoDB connection string. Without it, data goes to `data/db.json` |
-| `MONGODB_DB` | `rami` | Database name |
+| `mongoURI` | _none_ | MongoDB connection string (`MONGODB_URI` and `MONGO_URI` work too). Without it, data goes to `data/db.json` |
+| `MONGODB_DB` | from the URI, else `rami` | Database name, only if you want to override the one in the URI |
 | `HOST` | `0.0.0.0` | Use `127.0.0.1` behind a reverse proxy |
 | `SECURE_COOKIES` | `0` | `1` when served over https |
 | `MAX_USERS` | `2` | Accounts allowed to sign up |

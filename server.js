@@ -13,7 +13,7 @@ const path = require('path');
 const crypto = require('crypto');
 const readline = require('readline');
 const game = require('./game');
-const { openStore, summary } = require('./store');
+const { openStore, summary, mongoUri } = require('./store');
 
 const PORT = +process.env.PORT || 3333;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -279,7 +279,7 @@ async function start() {
     }
   });
   server.listen(PORT, HOST, () => {
-    console.log(`Rami running on http://${HOST}:${PORT} (${process.env.MONGODB_URI ? 'MongoDB' : 'local file storage'})`);
+    console.log(`Rami running on http://${HOST}:${PORT} (${mongoUri() ? 'MongoDB' : 'local file storage'})`);
   });
   const stop = async () => { server.close(); await queue; await store.close(); process.exit(0); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);
