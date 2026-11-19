@@ -61,6 +61,8 @@ class MongoStore {
   async deleteSession(token) { await this.sessions.deleteOne({ _id: token }); }
   async deleteSessionsFor(uid) { await this.sessions.deleteMany({ uid }); }
   async saveRules(r) { await this.settings.replaceOne({ _id: 'rules' }, r, { upsert: true }); }
+  async getSetting(id) { const d = await this.settings.findOne({ _id: id }); if (!d) return null; const { _id, ...rest } = d; return rest; }
+  async saveSetting(id, doc) { await this.settings.replaceOne({ _id: id }, doc, { upsert: true }); }
   async saveGame(g) { await this.games.replaceOne({ _id: g.no }, g, { upsert: true }); }
   async close() { await this.client?.close(); }
 }
@@ -89,6 +91,8 @@ class FileStore {
   async deleteSession(t) { delete this.data.sessions[t]; await this.flush(); }
   async deleteSessionsFor(uid) { for (const [k, s] of Object.entries(this.data.sessions)) if (s.uid === uid) delete this.data.sessions[k]; await this.flush(); }
   async saveRules(r) { this.data.rules = r; await this.flush(); }
+  async getSetting(id) { return (this.data.settings || {})[id] || null; }
+  async saveSetting(id, doc) { this.data.settings = { ...(this.data.settings || {}), [id]: doc }; await this.flush(); }
   async saveGame(g) { this.data.games[g.no] = g; await this.flush(); }
   async close() {}
 }

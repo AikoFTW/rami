@@ -4,6 +4,11 @@
 self.RamiI18n = {
   en: {
     dir: 'ltr', langName: 'English',
+    notifyL: 'Turn notifications', notifyS: "Get a notification when it's your turn, even when Rami is closed.",
+    notifyIOS: 'On iPhone: tap Share, then "Add to Home Screen". Open Rami from your home screen and turn this on there.',
+    notifyUnsupported: "This browser can't show notifications.", notifyBlocked: 'Notifications are blocked for this site. Allow them in your browser settings, then come back here.',
+    notifyOn: 'Notifications are on for this device.', notifyOff: 'Notifications are off for this device.', notifyTest: 'Send a test', notifySent: 'Test sent. It should arrive in a moment.',
+    notifyThisDevice: 'Turn it on for each phone or computer you play on.',
     soundS: 'Card sounds, shuffling and your-turn chime',
     zlayji: 'Zlayji mode', zlayjiS: 'Moroccan red and green table with zellige cards. Turn it off to get your own look back.', zlayjiOn: 'Zlayji mode on. Dima Maghrib!',
     storageWarn: 'Not connected to MongoDB, so accounts and games are only kept until the next deploy. Set mongoURI in your environment variables and redeploy.',
@@ -72,6 +77,11 @@ self.RamiI18n = {
 
   fr: {
     dir: 'ltr', langName: 'Français',
+    notifyL: 'Notifications de tour', notifyS: 'Recevez une notification quand c’est votre tour, même quand Rami est fermé.',
+    notifyIOS: 'Sur iPhone : touchez Partager, puis « Sur l’écran d’accueil ». Ouvrez Rami depuis l’écran d’accueil et activez-les là.',
+    notifyUnsupported: 'Ce navigateur ne peut pas afficher de notifications.', notifyBlocked: 'Les notifications sont bloquées pour ce site. Autorisez-les dans les réglages du navigateur, puis revenez ici.',
+    notifyOn: 'Notifications activées sur cet appareil.', notifyOff: 'Notifications désactivées sur cet appareil.', notifyTest: 'Envoyer un test', notifySent: 'Test envoyé. Il devrait arriver dans un instant.',
+    notifyThisDevice: 'Activez-les sur chaque téléphone ou ordinateur où vous jouez.',
     soundS: 'Bruits de cartes, mélange et signal de votre tour',
     zlayji: 'Mode Zlayji', zlayjiS: 'Table rouge et verte et cartes en zellige. Désactivez-le pour retrouver votre style.', zlayjiOn: 'Mode Zlayji activé. Dima Maghrib !',
     storageWarn: "Pas connecté à MongoDB : les comptes et les parties ne sont gardés que jusqu'au prochain déploiement. Ajoutez mongoURI à vos variables d'environnement puis redéployez.",
@@ -140,6 +150,11 @@ self.RamiI18n = {
 
   ar: {
     dir: 'rtl', langName: 'العربية',
+    notifyL: 'إشعارات الدور', notifyS: 'تصلك إشعارات عندما يحين دورك، حتى عندما يكون رامي مغلقًا.',
+    notifyIOS: 'على الآيفون: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية». افتح رامي من الشاشة الرئيسية وفعّلها هناك.',
+    notifyUnsupported: 'هذا المتصفح لا يدعم الإشعارات.', notifyBlocked: 'الإشعارات محظورة لهذا الموقع. اسمح بها من إعدادات المتصفح ثم عد إلى هنا.',
+    notifyOn: 'الإشعارات مفعّلة على هذا الجهاز.', notifyOff: 'الإشعارات متوقفة على هذا الجهاز.', notifyTest: 'إرسال تجربة', notifySent: 'تم إرسال التجربة. ستصل بعد لحظة.',
+    notifyThisDevice: 'فعّلها على كل هاتف أو حاسوب تلعب عليه.',
     soundS: 'أصوات الأوراق والخلط وتنبيه دورك',
     zlayji: 'وضع زلايجي', zlayjiS: 'طاولة حمراء وخضراء وأوراق بالزليج. أوقفه لتعود إلى مظهرك.', zlayjiOn: 'وضع زلايجي مفعّل. ديما مغرب!',
     storageWarn: 'غير متصل بـ MongoDB، لذلك تُحفظ الحسابات والألعاب حتى النشر القادم فقط. أضف mongoURI إلى متغيرات البيئة ثم أعد النشر.',

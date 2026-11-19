@@ -552,3 +552,6 @@ body.zlayji #toast { background: var(--zl-green); box-shadow: 0 0 0 2px var(--zl
 .zl-title svg, .zl-flag svg { width: 30px; height: 20px; display: block; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.3) }
 .zl-flag { display: grid; place-items: center; animation: rise .3s var(--ease) both }
 .spark.zl-red { color: #c1272d } .spark.zl-green { color: #0a8a4a } .spark.zl-gold { color: #e8b23a }
+.notify-test { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 4px }
+.notify-test small { color: var(--muted); font-size: 14px }
+.notify-test .btn { min-height: 40px; padding: 6px 16px; font-size: 15px }

@@ -79,11 +79,17 @@
     catch (e) { toast(e.message); }
   }
   let es = null;
+  const pageId = Math.random().toString(36).slice(2, 12);
+  const visible = () => document.visibilityState === 'visible';
   function listen() {
     if (es) es.close();
-    es = new EventSource('/api/events');
+    es = new EventSource(`/api/events?page=${pageId}&visible=${visible() ? 1 : 0}`);
     es.addEventListener('update', refresh);
   }
+  // tell the server when this page goes to the background, so it knows to send a notification instead
+  const presence = v => { try { navigator.sendBeacon('/api/presence', JSON.stringify({ page: pageId, visible: v })); } catch {} };
+  document.addEventListener('visibilitychange', () => { if (S) { presence(visible()); if (visible()) refresh(); } });
+  window.addEventListener('pagehide', () => presence(false));
   function toast(msg) {
     const el = $('#toast'); el.textContent = msg; el.classList.add('show');
     clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('show'), 4200);
@@ -201,7 +207,7 @@
       try {
         await call(up ? '/api/signup' : '/api/login', { name: f.get('name'), password: f.get('password') });
         const picked = lang;
-        listen(); await refresh();
+        listen(); await refresh(); syncPush();
         if (!S.me.prefs?.lang) { setLang(picked, true); render(); }   // remember the language picked at sign-in
       } catch (x) { renderLogin(x.message, mode); }
     });
@@ -760,14 +766,58 @@
     });
   }
 
-  function renderNotifyRow() {}
+  // ---------- turn notifications ----------
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const keyBytes = b64 => { const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); };
+  async function pushReg() { return pushSupported() ? navigator.serviceWorker.ready : null; }
+  async function renderNotifyRow() {
+    const row = $('#notifyRow'); if (!row) return;
+    const shell = (control, note) => `<div class="field"><label for="notifySwitch">${esc(t('notifyL'))}<small>${esc(note)}</small></label>${control}</div>`;
+    if (!pushSupported()) { row.innerHTML = shell('', isIOS() && !standalone() ? t('notifyIOS') : t('notifyUnsupported')); return; }
+    if (Notification.permission === 'denied') { row.innerHTML = shell('', t('notifyBlocked')); return; }
+    const reg = await pushReg(); const sub = reg && await reg.pushManager.getSubscription();
+    if (!$('#notifyRow')) return;
+    row.innerHTML = shell(`<input type="checkbox" class="switch" id="notifySwitch" ${sub ? 'checked' : ''}>`, t('notifyS'))
+      + (sub ? `<p class="notify-test"><button type="button" class="btn" id="notifyTest">${esc(t('notifyTest'))}</button><small>${esc(t('notifyThisDevice'))}</small></p>` : '');
+    $('#notifySwitch').addEventListener('change', async e => {
+      e.target.disabled = true;
+      try {
+        if (e.target.checked) {
+          if (await Notification.requestPermission() !== 'granted') { renderNotifyRow(); return; }
+          const { publicKey } = await call('/api/push/key');
+          const s2 = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+          await call('/api/push/subscribe', { subscription: s2.toJSON() });
+          toast(t('notifyOn'));
+        } else {
+          const cur = await reg.pushManager.getSubscription();
+          if (cur) { await call('/api/push/unsubscribe', { endpoint: cur.endpoint }).catch(() => {}); await cur.unsubscribe(); }
+          toast(t('notifyOff'));
+        }
+      } catch (x) { toast(x.message || t('notifyUnsupported')); }
+      renderNotifyRow();
+    });
+    $('#notifyTest')?.addEventListener('click', async () => {
+      try { await call('/api/push/test', {}); toast(t('notifySent')); } catch (x) { toast(x.message); }
+    });
+  }
+  // keep the server's copy of this device's subscription in step (e.g. after the database was reset)
+  async function syncPush() {
+    try {
+      if (!pushSupported() || Notification.permission !== 'granted') return;
+      const reg = await pushReg(); const sub = await reg.pushManager.getSubscription();
+      if (sub) await call('/api/push/subscribe', { subscription: sub.toJSON() });
+    } catch {}
+  }
 
   // ---------- start ----------
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   window.addEventListener('hashchange', () => { sel = null; render(); });
   fetch('/api/state').then(r => r.ok ? r.json() : null).then(s => {
     if (!s) return renderLogin();
     S = s;
     if (S.me.prefs?.lang) setLang(S.me.prefs.lang);
-    applyPrefs(); render(); listen();
+    applyPrefs(); render(); listen(); syncPush();
   }).catch(() => renderLogin(t('cantReach')));
 }

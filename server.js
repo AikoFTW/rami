@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const readline = require('readline');
 const game = require('./game');
 const { openStore, summary, mongoUri } = require('./store');
+const webpush = require('./webpush');
 
 const PORT = +process.env.PORT || 3333;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -80,6 +81,55 @@ function broadcast() {
   for (const res of streams) res.write(`event: update\ndata: ${version}\n\n`);
 }
 setInterval(() => { for (const res of streams) res.write(': ping\n\n'); }, 25e3).unref();
+
+// ---------- notifications ----------
+let vapid = null;   // { publicKey, privateKey, subject }, kept in the database so subscriptions stay valid
+async function loadVapid() {
+  let keys = process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
+    ? { publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY } : await store.getSetting('vapid');
+  if (!keys) { keys = webpush.generateVapidKeys(); await store.saveSetting('vapid', keys); }
+  vapid = { ...keys, subject: process.env.VAPID_SUBJECT || null };
+}
+const PUSH_TEXT = {
+  en: { turn: 'Your turn', threw: '{name} threw {card}.', newGame: 'New game', dealt: '{name} dealt a new game. You start!', dealtWait: '{name} dealt a new game.',
+        lost: '{name} got Rami!', lostBody: 'Tap to see their hand.', won: 'You win!', resigned: '{name} resigned.', test: 'Notifications are on', testBody: "You'll hear from Rami when it's your turn." },
+  fr: { turn: 'À vous de jouer', threw: '{name} a jeté {card}.', newGame: 'Nouvelle partie', dealt: '{name} a distribué. Vous commencez !', dealtWait: '{name} a distribué une nouvelle partie.',
+        lost: '{name} a fait Rami !', lostBody: 'Touchez pour voir sa main.', won: 'Vous gagnez !', resigned: '{name} a abandonné.', test: 'Notifications activées', testBody: 'Rami vous préviendra quand ce sera votre tour.' },
+  ar: { turn: 'دورك', threw: '{name} رمى {card}.', newGame: 'لعبة جديدة', dealt: '{name} وزّع لعبة جديدة. أنت تبدأ!', dealtWait: '{name} وزّع لعبة جديدة.',
+        lost: '{name} أعلن رامي!', lostBody: 'اضغط لترى أوراقه.', won: 'لقد فزت!', resigned: '{name} انسحب.', test: 'الإشعارات مفعّلة', testBody: 'سيخبرك رامي عندما يحين دورك.' },
+};
+const SUIT_SYM = { S: '♠', H: '♥', D: '♦', C: '♣' };
+const cardText = id => id[0] === 'J' ? 'Joker' : ({ 1: 'A', 11: 'J', 12: 'Q', 13: 'K' }[id.split('-')[0]] || id.split('-')[0]) + SUIT_SYM[id.split('-')[1]];
+function pushText(u, key, vars = {}) {
+  const lang = PUSH_TEXT[u.prefs?.lang] ? u.prefs.lang : 'en';
+  return (PUSH_TEXT[lang][key] || PUSH_TEXT.en[key]).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+}
+// who is looking at the game right now (an open page that is in front)
+const looking = new Map();   // uid -> Set of visible page ids
+const isLooking = uid => (looking.get(uid)?.size || 0) > 0;
+async function notify(uid, { title, body, tag = 'rami', force = false }) {
+  const u = db.users[uid];
+  if (!u || !vapid || !(u.pushSubs || []).length) return;
+  if (!force && isLooking(uid)) return;           // they're already watching the table
+  const payload = { title, body, tag, url: '/#play' };
+  let changed = false;
+  for (const sub of [...u.pushSubs]) {
+    try {
+      const subject = vapid.subject || sub.origin || 'mailto:rami@example.com';
+      const r = await webpush.send(sub, payload, { ...vapid, subject }, { topic: tag.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) });
+      if (r.status === 404 || r.status === 410) { u.pushSubs = u.pushSubs.filter(x => x.endpoint !== sub.endpoint); changed = true; }
+      else if (r.status >= 400) console.error(`Push to ${new URL(sub.endpoint).host} failed: ${r.status} ${r.body}`);
+    } catch (e) { console.error('Push failed:', e.message); }
+  }
+  if (changed) persist(() => store.saveUser(u));
+}
+function notifyAfterMove(g, uid, move) {
+  const other = g.players.find(p => p !== uid), o = db.users[other], me = db.users[uid];
+  if (!o || !me) return;
+  if (g.result === 'rami') notify(other, { title: pushText(o, 'lost', { name: me.name }), body: pushText(o, 'lostBody'), tag: 'result' });
+  else if (g.result === 'resign') notify(other, { title: pushText(o, 'won'), body: pushText(o, 'resigned', { name: me.name }), tag: 'result' });
+  else if (move.type === 'discard') notify(other, { title: pushText(o, 'turn'), body: pushText(o, 'threw', { name: me.name, card: cardText(move.card) }), tag: 'turn' });
+}
 
 // ---------- stats ----------
 function stats() {
@@ -149,7 +199,7 @@ function readBody(req) {
     req.on('end', () => { try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks)) : {}); } catch { reject(new Error('Bad JSON')); } });
   });
 }
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 function serveStatic(req, res) {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p === '/') p = '/index.html';
@@ -162,7 +212,7 @@ function serveStatic(req, res) {
 }
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin',
-  'Content-Security-Policy': "default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:",
+  'Content-Security-Policy': "default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; worker-src 'self'; manifest-src 'self'",
 };
 
 async function api(req, res, url) {
@@ -217,8 +267,42 @@ async function api(req, res, url) {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
       res.write(`event: update\ndata: ${version}\n\n`);
       streams.add(res);
-      req.on('close', () => streams.delete(res));
+      // the page says whether it's in front; it starts out visible
+      const pageId = String(url.searchParams.get('page') || crypto.randomBytes(6).toString('hex')).slice(0, 40);
+      if (url.searchParams.get('visible') !== '0') { if (!looking.has(u.id)) looking.set(u.id, new Set()); looking.get(u.id).add(pageId); }
+      req.on('close', () => { streams.delete(res); looking.get(u.id)?.delete(pageId); });
       return;
+    }
+    case 'POST /api/presence': {
+      const { page, visible } = await readBody(req);
+      if (typeof page === 'string' && page.length < 40) {
+        if (!looking.has(u.id)) looking.set(u.id, new Set());
+        if (visible) looking.get(u.id).add(page); else looking.get(u.id).delete(page);
+      }
+      return send(res, 200, { ok: true });
+    }
+    case 'GET /api/push/key': return send(res, 200, { publicKey: vapid?.publicKey || null });
+    case 'POST /api/push/subscribe': {
+      const { subscription } = await readBody(req);
+      const ok = subscription && typeof subscription.endpoint === 'string' && /^https:\/\//.test(subscription.endpoint)
+        && subscription.keys && typeof subscription.keys.p256dh === 'string' && typeof subscription.keys.auth === 'string';
+      if (!ok) return send(res, 400, { error: 'Bad subscription.' });
+      const clean = { endpoint: subscription.endpoint, keys: { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth },
+        origin: `https://${req.headers.host}`, addedAt: Date.now() };
+      u.pushSubs = [...(u.pushSubs || []).filter(x => x.endpoint !== clean.endpoint), clean].slice(-6);
+      persist(() => store.saveUser(u));
+      return send(res, 200, { ok: true });
+    }
+    case 'POST /api/push/unsubscribe': {
+      const { endpoint } = await readBody(req);
+      u.pushSubs = (u.pushSubs || []).filter(x => x.endpoint !== endpoint);
+      persist(() => store.saveUser(u));
+      return send(res, 200, { ok: true });
+    }
+    case 'POST /api/push/test': {
+      if (!(u.pushSubs || []).length) return send(res, 400, { error: 'This device is not subscribed yet.' });
+      await notify(u.id, { title: pushText(u, 'test'), body: pushText(u, 'testBody'), tag: 'test', force: true });
+      return send(res, 200, { ok: true });
     }
     case 'POST /api/prefs': {
       const { prefs } = await readBody(req);
@@ -251,6 +335,8 @@ async function api(req, res, url) {
       const ng = game.newGame({ no: db.nextGameNo++, players, starter, rules });
       db.game = ng;
       persist(() => store.saveGame(ng)); broadcast();
+      const o = db.users[opp.id];
+      notify(opp.id, { title: pushText(o, 'newGame'), body: pushText(o, starter === opp.id ? 'dealt' : 'dealtWait', { name: u.name }), tag: 'turn' });
       return send(res, 200, { ok: true });
     }
     case 'POST /api/game/move': {
@@ -264,6 +350,7 @@ async function api(req, res, url) {
         const snapshot = structuredClone(g);
         persist(() => store.saveGame(snapshot));
         if (!r.quiet) broadcast();
+        if (!r.quiet) notifyAfterMove(g, u.id, move);
         return send(res, 200, { ok: true });
       } catch (e) { return send(res, 400, { error: e.message, code: e.code }); }
     }
@@ -289,6 +376,7 @@ function migrateRules() {
 async function start() {
   db = await store.load(game.DEFAULT_RULES);
   migrateRules();
+  await loadVapid();
   const server = http.createServer(async (req, res) => {
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
     const url = new URL(req.url, 'http://x');

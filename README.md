@@ -15,6 +15,10 @@ The server checks every Rami automatically, so it can't be declared by mistake.
 
 While you play, your hand is grouped into the melds you already have (gold for swivi, blue for tirci), with loose cards after them. A card you just drew sits apart until you've thrown a card. When a throw would win, that card gets a green ring and Declare Rami pulses. You can turn grouping off in Settings.
 
+**Turn notifications:** turn them on in Settings on each phone or computer. You get a notification when it's your turn, when a new game is dealt, and when someone wins, but not while you're looking at the game. On iPhone, add Rami to your home screen first (Share, then "Add to Home Screen") and turn them on from there. The keys that sign the notifications are created on first start and stored in the database, so nothing needs configuring.
+
+**Sound effects** are on by default; switch them off in Settings. There's also a little hidden extra at the bottom of Settings.
+
 The site is in **English, Arabic and French**. Pick a language on the sign-in screen, at the top of any page, or in Settings. Arabic reads right to left. Every rule above can be changed on the **Settings** page. Each player also picks their own table colour, card size, suit colours, theme and turn sound there.
 
 ## Run it
@@ -37,10 +41,11 @@ Open the site and both of you tap **Create an account**. Sign-up closes once bot
 | `HOST` | `0.0.0.0` | Use `127.0.0.1` behind a reverse proxy |
 | `SECURE_COOKIES` | `0` | `1` when served over https |
 | `MAX_USERS` | `2` | Accounts allowed to sign up |
+| `VAPID_SUBJECT` | your site's address | Optional contact for push services, e.g. `mailto:you@example.com` |
 
 ### MongoDB collections
 
-`users` (names, password hashes, display settings), `sessions` (logins; expired ones are removed automatically), `settings` (house rules), `games` (every game, current and finished, which the stats and history are built from).
+`users` (names, password hashes, display settings, notification subscriptions), `sessions` (logins; expired ones are removed automatically), `settings` (house rules and the notification signing keys), `games` (every game, current and finished, which the stats and history are built from).
 
 ### Handy commands
 
