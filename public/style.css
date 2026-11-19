@@ -401,3 +401,33 @@ select.lang { color: #f6efe2 }
   .hand-wrap .hint { display: block; font-size: 14px; margin-top: 8px }
 }
 .status .win-now { color: var(--saffron) }
+
+/* ---------- card animation helpers ---------- */
+.card.flipping { backface-visibility: visible }
+.card.flipping::before { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 3; pointer-events: none;
+  background: var(--terra); background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 4px, transparent 4px 10px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.14) 0 4px, transparent 4px 10px);
+  box-shadow: inset 0 0 0 3px #fffdf8;
+  animation: backfade var(--flip-ms, 520ms) linear var(--flip-delay, 0ms) both }
+@keyframes backfade { 0%, 43% { opacity: 1 } 47%, 100% { opacity: 0 } }
+.card.ghost { position: fixed; z-index: 40; margin: 0; pointer-events: none }
+.spark { position: fixed; z-index: 45; pointer-events: none; font-size: 26px; line-height: 1; font-family: Rubik, sans-serif; text-shadow: 0 2px 6px rgba(0,0,0,.25) }
+.spark.s0, .spark.s3 { color: #1d1d1d } .spark.s1, .spark.s2 { color: var(--terra) } .spark.s4 { color: var(--saffron) }
+:root[data-theme=dark] .spark.s0, :root[data-theme=dark] .spark.s3 { color: #f6efe2 }
+
+/* springy pick-up and hover */
+.hand .card { transition: transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .2s }
+@media (hover: hover) { .hand .card:hover:not(.sel) { transform: translateY(-6px) rotate(-1.5deg) } }
+.hand .card.sel { animation: pick .38s cubic-bezier(.34,1.56,.64,1) both }
+@keyframes pick { from { transform: translateY(0) } }
+/* the new-card dot pops in */
+.hand .card.new::after { animation: dot .45s cubic-bezier(.34,1.8,.64,1) .35s both }
+@keyframes dot { from { transform: scale(0); opacity: 0 } }
+/* the deck glows gently when it's your turn to draw */
+.pile.can .card { position: relative }
+.pile.can .card::after { content: ''; position: absolute; inset: -6px; border-radius: 14px; box-shadow: 0 0 0 3px var(--saffron), 0 0 22px 4px rgba(232,178,58,.55);
+  opacity: 0; animation: glow 1.8s ease-in-out infinite; pointer-events: none }
+@keyframes glow { 50% { opacity: 1 } }
+.potential .meld .card.hi { animation: bob 1.6s ease-in-out .4s infinite }
+@keyframes bob { 50% { transform: translateY(-4px) } }

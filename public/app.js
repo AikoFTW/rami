@@ -52,9 +52,24 @@
     if (!r.ok) throw new Error(errText(data.code, data.error));
     return data;
   }
+  // One refresh at a time; if the state is identical to what's on screen, don't redraw
+  // (your own move and the live update both ask for it, and a second redraw would restart animations).
+  let refreshing = null, again = false, lastJSON = '';
   async function refresh() {
+    if (refreshing) { again = true; return refreshing; }
+    refreshing = (async () => {
+      do { again = false; await refreshOnce(); } while (again);
+      refreshing = null;
+    })();
+    return refreshing;
+  }
+  async function refreshOnce() {
     try {
-      S = await call('/api/state');
+      const next = await call('/api/state');
+      const json = JSON.stringify({ ...next, version: 0 });
+      if (json === lastJSON && S) return;
+      lastJSON = json;
+      S = next;
       if (S.me.prefs?.lang && S.me.prefs.lang !== lang) setLang(S.me.prefs.lang);
       applyPrefs(); render();
     } catch (e) { if (e.message !== 'signed out') toast(e.message); }
@@ -310,34 +325,120 @@
       ${chip('auto', t('jokerAuto'), '', !cur)}${chip('loose', t('jokerLoose'), '', cur === 'loose')}${list}</div></details>`, opts };
   }
 
-  // ---------- smooth card movement (FLIP: measure, change, play the difference) ----------
+  // ---------- card animations ----------
+  // FLIP: measure where cards were, redraw, then play the difference. Only transform and
+  // opacity change, so the browser can run it on the graphics chip without relayout.
+  // composite:'add' layers the motion on top of a card's own CSS (like the lift when selected).
+  let seen = null;   // what the last drawn table looked like
+  const center = r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  const P = 'perspective(700px) ';
   function snapshot() {
     const m = new Map();
-    document.querySelectorAll('#hand [data-id], #pile [data-id]').forEach(el => m.set(el.dataset.id, el.getBoundingClientRect()));
-    const r = sel => document.querySelector(sel)?.getBoundingClientRect() || null;
-    return { m, deck: r('#deck .card'), opp: r('.backs'), no: S?.game?.no };
+    document.querySelectorAll('#hand [data-id], #pile [data-id]').forEach(el => m.set(el.dataset.id, { r: el.getBoundingClientRect(), pile: !!el.closest('#pile') }));
+    const r = q => { const e = document.querySelector(q); if (!e) return null; const b = e.getBoundingClientRect(); return b.width ? b : null; };
+    return { m, deck: r('#deck .card') || r('#deck') || r('#deal'), pile: r('#pile .card') || r('#pile'), opp: r('.backs') || r('.opp-name'), sel, ...seen };
   }
-  function flip(before) {
-    if (!before || reduceMotion() || !before.deck) return;
+  function animate(el, frames, opts) {
+    try { return el.animate(frames, { composite: 'add', fill: 'backwards', ...opts }); }
+    catch { return el.animate(frames, { fill: 'backwards', ...opts }); }   // very old browsers
+  }
+  // A card flying in face down that turns over on the way (from the deck, or from her side).
+  function flyIn(el, from, delay = 0, dur = 600) {
+    const a = center(from), b = center(el.getBoundingClientRect());
+    const dx = a.x - b.x, dy = a.y - b.y, lift = Math.min(60, 20 + Math.abs(dx) * 0.08);
+    el.classList.add('flipping'); el.style.setProperty('--flip-ms', dur + 'ms'); el.style.setProperty('--flip-delay', delay + 'ms');
+    const anim = animate(el, [
+      { transform: `${P}translate(${dx}px,${dy}px) rotateY(180deg) rotate(-6deg) scale(.82)`, opacity: .9 },
+      { transform: `${P}translate(${dx * .35}px,${dy * .35 - lift}px) rotateY(70deg) rotate(3deg) scale(1.06)`, opacity: 1, offset: .55 },
+      { transform: `${P}translate(0px,0px) rotateY(0deg) rotate(0deg) scale(1)`, opacity: 1 },
+    ], { duration: dur, delay, easing: 'cubic-bezier(.33,.6,.3,1)' });
+    anim.onfinish = anim.oncancel = () => el.classList.remove('flipping');
+  }
+  // A card that already exists moving somewhere: a hop if it goes far (to or from the pile).
+  function travel(el, dx, dy, far) {
+    if (far) animate(el, [
+      { transform: `translate(${dx}px,${dy}px) rotate(0deg) scale(1)` },
+      { transform: `translate(${dx * .45}px,${dy * .45 - 46}px) rotate(${dx > 0 ? -8 : 8}deg) scale(1.1)`, offset: .45 },
+      { transform: 'translate(0px,0px) rotate(0deg) scale(.96)', offset: .82 },
+      { transform: 'translate(0px,0px) rotate(0deg) scale(1)' },
+    ], { duration: 600, easing: 'cubic-bezier(.25,.45,.35,1)' });
+    else animate(el, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0px,0px)' }],
+      { duration: 380, easing: 'cubic-bezier(.34,1.25,.64,1)' });
+  }
+  // A plain card back gliding across the table (her draws and pick-ups).
+  function ghost(from, to, delay = 0) {
+    if (!from || !to) return;
+    const g = document.createElement('div');
+    g.className = 'card back ghost';
+    Object.assign(g.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' });
+    document.body.appendChild(g);
+    const a = center(from), b = center(to);
+    const anim = g.animate([
+      { transform: 'translate(0px,0px) rotate(0deg) scale(1)', opacity: 1 },
+      { transform: `translate(${(b.x - a.x) * .5}px,${(b.y - a.y) * .5 - 30}px) rotate(-10deg) scale(.9)`, opacity: 1, offset: .5 },
+      { transform: `translate(${b.x - a.x}px,${b.y - a.y}px) rotate(-4deg) scale(.6)`, opacity: 0 },
+    ], { duration: 560, delay, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'both' });
+    anim.onfinish = anim.oncancel = () => g.remove();
+  }
+  function hop(el, delay = 0) {
+    if (el) animate(el, [{ transform: 'translateY(0px)' }, { transform: 'translateY(-12px)', offset: .3 }, { transform: 'translateY(0px)', offset: .6 },
+      { transform: 'translateY(-5px)', offset: .8 }, { transform: 'translateY(0px)' }], { duration: 700, delay, easing: 'ease-out' });
+  }
+  // A short burst of suit symbols when someone wins.
+  function celebrate(won) {
+    const box = document.querySelector('.table')?.getBoundingClientRect(); if (!box) return;
+    const n = won ? 28 : 10, sym = ['♠', '♥', '♦', '♣', '★'];
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('span');
+      p.className = 'spark s' + (i % 5);
+      p.textContent = sym[i % 5];
+      Object.assign(p.style, { left: box.left + box.width / 2 + 'px', top: box.top + box.height * .35 + 'px' });
+      document.body.appendChild(p);
+      const ang = (i / n) * Math.PI * 2 + Math.random() * .4, dist = 90 + Math.random() * Math.min(260, box.width * .45);
+      const x = Math.cos(ang) * dist, y = Math.sin(ang) * dist * .7;
+      const anim = p.animate([
+        { transform: 'translate(-50%,-50%) translate(0px,0px) scale(.4) rotate(0deg)', opacity: 0 },
+        { transform: `translate(-50%,-50%) translate(${x * .7}px,${y * .7 - 30}px) scale(1.2) rotate(${x > 0 ? 90 : -90}deg)`, opacity: 1, offset: .35 },
+        { transform: `translate(-50%,-50%) translate(${x}px,${y + 140}px) scale(.8) rotate(${x > 0 ? 200 : -200}deg)`, opacity: 0 },
+      ], { duration: 1300 + Math.random() * 500, delay: Math.random() * 120, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'both' });
+      anim.onfinish = anim.oncancel = () => p.remove();
+    }
+  }
+
+  function playAnimations(before) {
+    const g = S.game;
+    if (!g) return;
+    const oppId = g.players.find(p => p !== me());
+    const now = { no: g.no, oppCount: g.counts[oppId], over: !!g.result, mine: !g.result && g.turn === me(), top: g.discardTop };
+    const prev = seen; seen = now;
+    if (!before || reduceMotion() || !before.deck || !prev) return;
+    const sameGame = prev.no === now.no;
     const fresh = [];
-    const sameGame = before.no === S.game?.no;
-    const ease = 'cubic-bezier(.2,.8,.2,1)';
     document.querySelectorAll('#hand [data-id], #pile [data-id]').forEach(el => {
-      const r = el.getBoundingClientRect(), b = sameGame && before.m.get(el.dataset.id);
-      if (b) {
-        const dx = b.left - r.left, dy = b.top - r.top;
-        if (Math.abs(dx) > 1 || Math.abs(dy) > 1)
-          el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 340, easing: ease });
-      } else fresh.push([el, r]);
+      const b = sameGame && before.m.get(el.dataset.id);
+      if (!b) return fresh.push(el);
+      const r = el.getBoundingClientRect();
+      const dx = b.r.left - r.left, dy = b.r.top - r.top;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) travel(el, dx, dy, b.pile !== !!el.closest('#pile'));   // hand <-> pile gets the hop
     });
-    const dealing = fresh.length > 3;
-    fresh.forEach(([el, r], i) => {
-      const from = el.closest('#pile') ? before.opp : before.deck;
-      if (!from) return;
-      const dx = from.left + from.width / 2 - (r.left + r.width / 2), dy = from.top + from.height / 2 - (r.top + r.height / 2);
-      el.animate([{ transform: `translate(${dx}px,${dy}px) scale(.85)`, opacity: .4 }, { transform: 'none', opacity: 1 }],
-        { duration: dealing ? 420 : 380, delay: dealing ? i * 40 : 0, easing: ease, fill: 'backwards' });
+    const dealing = !sameGame;
+    let k = 0;
+    fresh.forEach(el => {
+      if (el.closest('#pile')) flyIn(el, before.opp || before.deck, 0, 560);          // her discard lands
+      else flyIn(el, before.deck, dealing ? 120 + k++ * 55 : 0, dealing ? 560 : 520); // you draw / the deal
     });
+    if (dealing) for (let i = 0; i < Math.min(now.oppCount, 14); i++) ghost(before.deck, before.opp, 120 + i * 55);
+    // her draws: a card back glides from the deck (or the pile, if she took the top card) to her side
+    if (sameGame && now.oppCount > prev.oppCount) ghost(prev.top && prev.top !== now.top ? before.pile : before.deck, before.opp);
+    // your turn: the deck gives a little hop
+    if (sameGame && now.mine && !prev.mine) hop(document.querySelector('#deck .card'), 250);
+    // someone just won
+    if (sameGame && now.over && !prev.over) {
+      celebrate(g.winner === me());
+      document.querySelectorAll('.result .card').forEach((c, i) =>
+        animate(c, [{ transform: 'translateY(26px) scale(.7) rotate(-8deg)', opacity: 0 }, { transform: 'translateY(0px) scale(1) rotate(0deg)', opacity: 1 }],
+          { duration: 420, delay: 250 + i * 45, easing: 'cubic-bezier(.34,1.4,.64,1)' }));
+    }
   }
 
   function renderPlay() {
@@ -419,7 +520,7 @@
     <details class="log" ${window.innerWidth > 900 ? 'open' : ''}><summary><h3>${esc(t('gameN', { n: g.no }))} · ${esc(t('moves'))}</h3></summary><ol>${[...g.log].reverse().map(e => `<li>${logLine(e)}</li>`).join('')}</ol>
       ${over ? '' : `<p><button class="btn danger" id="resign">${esc(t('resign'))}</button></p>`}<p class="hint">${esc(rulesSummary(g.rules))}</p></details></div>`;
 
-    flip(before);
+    playAnimations(before);
     $('#deck').addEventListener('click', () => move({ type: 'draw', source: 'deck' }));
     $('#pile').addEventListener('click', () => move({ type: 'draw', source: 'discard' }));
     if (over) { $('#again')?.addEventListener('click', deal); return; }
