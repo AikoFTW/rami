@@ -243,7 +243,7 @@
       a.onfinish = a.oncancel = () => p.remove();
     }
   }
-  let shellKey = null, zlRevealed = false;
+  let shellKey = null, zlRevealed = false, logOpen = null;
   function render() {
     if (!S) return;
     const r = route();
@@ -619,10 +619,11 @@
       </div>
       ${over ? resultPanel(g, oppId) : ''}
     </div>
-    <details class="log" ${window.innerWidth > 900 ? 'open' : ''}><summary><h3>${esc(t('gameN', { n: g.no }))} · ${esc(t('moves'))}</h3></summary><ol>${[...g.log].reverse().map(e => `<li>${logLine(e)}</li>`).join('')}</ol>
+    <details class="log" id="movesLog" ${(logOpen ?? window.innerWidth > 900) ? 'open' : ''}><summary><h3>${esc(t('gameN', { n: g.no }))} · ${esc(t('moves'))}</h3></summary><ol>${[...g.log].reverse().map(e => `<li>${logLine(e)}</li>`).join('')}</ol>
       ${over ? '' : `<p><button class="btn danger" id="resign">${esc(t('resign'))}</button></p>`}<p class="hint">${esc(rulesSummary(g.rules))}</p></details></div>`;
 
     playAnimations(before);
+    $('#movesLog')?.addEventListener('toggle', e => { logOpen = e.target.open; });
     $('#deck').addEventListener('click', () => move({ type: 'draw', source: 'deck' }));
     $('#pile').addEventListener('click', () => move({ type: 'draw', source: 'discard' }));
     if (over) { $('#again')?.addEventListener('click', deal); return; }
