@@ -4,6 +4,7 @@
 self.RamiI18n = {
   en: {
     dir: 'ltr', langName: 'English',
+    soundS: 'Card sounds, shuffling and your-turn chime',
     zlayji: 'Zlayji mode', zlayjiS: 'Moroccan red and green table with zellige cards. Turn it off to get your own look back.', zlayjiOn: 'Zlayji mode on. Dima Maghrib!',
     storageWarn: 'Not connected to MongoDB, so accounts and games are only kept until the next deploy. Set mongoURI in your environment variables and redeploy.',
     storageL: 'Storage', storageMongo: 'MongoDB (kept across deploys)', storageFile: 'This server only (wiped on redeploy)',
@@ -42,7 +43,7 @@ self.RamiI18n = {
     curStreak: 'Current streak', bestStreak: 'Best streak', fastest: 'Fastest Rami', turnsN: '{n} turns',
     historyTitle: 'History', colWhen: 'When', colWinner: 'Winner', colTurns: 'Turns', colHand: 'Winning hand',
     badgeRami: 'Rami', badgeResign: 'Resign', noHistory: 'No finished games yet. Your first one will show up here.',
-    settingsTitle: 'Settings', houseRules: 'House rules', sharedHint: 'Shared by both of you. Changes apply from the next deal.',
+    settingsTitle: 'Settings', houseRules: 'House rules', sharedHint: 'Shared by both of you. Best left alone; changes apply from the next deal.',
     jokersL: 'Jokers', jokersS: 'How many jokers are in the two decks', dealtL: 'Cards dealt', dealtS: 'The starting player gets one extra',
     smallestMeld: 'Smallest meld', cards3: '3 cards', cards4: '4 cards',
     needSwivi: 'Swivis needed to win', swiviS: 'Same suit, numbers in a row', needTirci: 'Tircis needed to win', tirciS: 'Same number, different suits',
@@ -71,6 +72,7 @@ self.RamiI18n = {
 
   fr: {
     dir: 'ltr', langName: 'Français',
+    soundS: 'Bruits de cartes, mélange et signal de votre tour',
     zlayji: 'Mode Zlayji', zlayjiS: 'Table rouge et verte et cartes en zellige. Désactivez-le pour retrouver votre style.', zlayjiOn: 'Mode Zlayji activé. Dima Maghrib !',
     storageWarn: "Pas connecté à MongoDB : les comptes et les parties ne sont gardés que jusqu'au prochain déploiement. Ajoutez mongoURI à vos variables d'environnement puis redéployez.",
     storageL: 'Stockage', storageMongo: 'MongoDB (conservé entre les déploiements)', storageFile: 'Ce serveur seulement (effacé au redéploiement)',
@@ -109,7 +111,7 @@ self.RamiI18n = {
     curStreak: 'Série en cours', bestStreak: 'Meilleure série', fastest: 'Rami le plus rapide', turnsN: '{n} tours',
     historyTitle: 'Historique', colWhen: 'Quand', colWinner: 'Gagnant', colTurns: 'Tours', colHand: 'Main gagnante',
     badgeRami: 'Rami', badgeResign: 'Abandon', noHistory: 'Aucune partie terminée. La première apparaîtra ici.',
-    settingsTitle: 'Réglages', houseRules: 'Règles de la maison', sharedHint: 'Communes à vous deux. Elles s’appliquent à la prochaine donne.',
+    settingsTitle: 'Réglages', houseRules: 'Règles de la maison', sharedHint: 'Communes à vous deux. À éviter de changer ; elles s’appliquent à la prochaine donne.',
     jokersL: 'Jokers', jokersS: 'Nombre de jokers dans les deux paquets', dealtL: 'Cartes distribuées', dealtS: 'Celui qui commence en reçoit une de plus',
     smallestMeld: 'Plus petite combinaison', cards3: '3 cartes', cards4: '4 cartes',
     needSwivi: 'Swivis pour gagner', swiviS: 'Même couleur, valeurs qui se suivent', needTirci: 'Tircis pour gagner', tirciS: 'Même valeur, couleurs différentes',
@@ -138,6 +140,7 @@ self.RamiI18n = {
 
   ar: {
     dir: 'rtl', langName: 'العربية',
+    soundS: 'أصوات الأوراق والخلط وتنبيه دورك',
     zlayji: 'وضع زلايجي', zlayjiS: 'طاولة حمراء وخضراء وأوراق بالزليج. أوقفه لتعود إلى مظهرك.', zlayjiOn: 'وضع زلايجي مفعّل. ديما مغرب!',
     storageWarn: 'غير متصل بـ MongoDB، لذلك تُحفظ الحسابات والألعاب حتى النشر القادم فقط. أضف mongoURI إلى متغيرات البيئة ثم أعد النشر.',
     storageL: 'التخزين', storageMongo: 'MongoDB (يبقى بعد كل نشر)', storageFile: 'هذا الخادم فقط (يُمسح عند إعادة النشر)',
@@ -176,7 +179,7 @@ self.RamiI18n = {
     curStreak: 'السلسلة الحالية', bestStreak: 'أفضل سلسلة', fastest: 'أسرع رامي', turnsN: '{n} دورًا',
     historyTitle: 'السجل', colWhen: 'متى', colWinner: 'الفائز', colTurns: 'الأدوار', colHand: 'اليد الفائزة',
     badgeRami: 'رامي', badgeResign: 'انسحاب', noHistory: 'لا توجد ألعاب منتهية بعد. ستظهر أول لعبة هنا.',
-    settingsTitle: 'الإعدادات', houseRules: 'قواعد البيت', sharedHint: 'مشتركة بينكما. تُطبَّق من التوزيعة التالية.',
+    settingsTitle: 'الإعدادات', houseRules: 'قواعد البيت', sharedHint: 'مشتركة بينكما. يُفضّل عدم تغييرها؛ تُطبَّق من التوزيعة التالية.',
     jokersL: 'الجوكر', jokersS: 'عدد أوراق الجوكر في الرزمتين', dealtL: 'عدد الأوراق الموزعة', dealtS: 'من يبدأ يأخذ ورقة إضافية',
     smallestMeld: 'أصغر مجموعة', cards3: '3 أوراق', cards4: '4 أوراق',
     needSwivi: 'عدد السويفي اللازم للفوز', swiviS: 'نفس النوع وأرقام متتالية', needTirci: 'عدد التيرسي اللازم للفوز', tirciS: 'نفس الرقم وأنواع مختلفة',

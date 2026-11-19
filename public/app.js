@@ -215,12 +215,12 @@
   function setZlayji(on) {
     // only this one switch changes; your own colours, sizes and theme stay saved underneath
     S.me.prefs = { ...S.me.prefs, zlayji: on };
-    applyPrefs(); shellKey = null; render();
+    applyPrefs(); shellKey = null; render();   // header flag appears or goes
     if (on) { toast(t('zlayjiOn')); if (!reduceMotion()) celebrateFlag(); }
     call('/api/prefs', { prefs: { zlayji: on } }).catch(() => {});
   }
   function celebrateFlag() {
-    const btn = document.querySelector('#zlayji')?.getBoundingClientRect(); if (!btn) return;
+    const btn = (document.querySelector('#zlSwitch') || document.querySelector('.zl-flag'))?.getBoundingClientRect(); if (!btn) return;
     for (let i = 0; i < 14; i++) {
       const p = document.createElement('span');
       p.className = 'spark ' + (i % 2 ? 'zl-red' : 'zl-green'); p.textContent = '★';
@@ -232,7 +232,7 @@
       a.onfinish = a.oncancel = () => p.remove();
     }
   }
-  let shellKey = null;
+  let shellKey = null, zlRevealed = false;
   function render() {
     if (!S) return;
     const r = route();
@@ -251,10 +251,9 @@
       app.innerHTML = `<header class="top">
         <a class="brand" href="#play"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 8l6 10 11-3-3 11 10 6-10 6 3 11-11-3-6 10-6-10-11 3 3-11-10-6 10-6-3-11 11 3z"/></svg>Rami</a>
         <nav class="tabs">${links}</nav>
-        <span class="who"><button id="zlayji" class="zl-btn" aria-pressed="${!!S.me.prefs?.zlayji}" title="${esc(t('zlayji'))}" aria-label="${esc(t('zlayji'))}">${FLAG}</button>${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
+        <span class="who">${S.me.prefs?.zlayji ? `<span class="zl-flag" title="Dima Maghrib" aria-hidden="true">${FLAG}</span>` : ''}${langSelect('topLang')}<span class="me-name">${esc(S.me.name)}</span><button id="out">${esc(t('signOut'))}</button></span></header><main id="main"></main>`;
       $('#out').addEventListener('click', async () => { await call('/api/logout', {}).catch(() => {}); S = null; shellKey = null; renderLogin(); });
       $('#topLang').addEventListener('change', e => { setLang(e.target.value, true); render(); });
-      $('#zlayji').addEventListener('click', () => setZlayji(!S.me.prefs?.zlayji));
     }
     ({ play: renderPlay, stats: renderStats, history: renderHistory, settings: renderSettings }[r] || renderPlay)();
     if (r !== lastRoute) {
@@ -695,8 +694,23 @@
     const chk = (k, v) => `<input type="checkbox" name="${k}" ${v ? 'checked' : ''}>`;
     const opt = (name, cur, list) => `<select name="${name}">${list.map(([v, txt]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${esc(txt)}</option>`).join('')}</select>`;
     const field = (labelKey, subKey, control) => `<div class="field"><label>${esc(t(labelKey))}${subKey ? `<small>${esc(t(subKey))}</small>` : ''}</label>${control}</div>`;
+    const zlOpen = !!p.zlayji || zlRevealed;
     $('#main').innerHTML = `<h1 class="page-title">${esc(t('settingsTitle'))}</h1><div class="grid2">
-      <form class="panel settings" id="rules"><h2>${esc(t('houseRules'))}</h2><p class="hint">${esc(t('sharedHint'))}</p>
+      <form class="panel settings" id="prefs"><h2>${esc(t('yourLook'))}</h2><p class="hint">${esc(t('lookHint'))}</p>
+        ${field('language', '', opt('lang', lang, LANGS.map(l => [l, self.RamiI18n[l].langName])))}
+        <div class="field wide"><label>${esc(t('tableColour'))}</label><div class="swatches">${FELTS.map((c, i) => `<button type="button" class="swatch sw-${i}" data-c="${c}" aria-label="${esc(t('colourN', { n: i + 1 }))}" aria-pressed="${(p.felt || FELTS[0]) === c}"></button>`).join('')}<input type="color" name="felt" value="${p.felt || FELTS[0]}" aria-label="${esc(t('customColour'))}"></div></div>
+        ${field('groupMelds', 'groupMeldsS', `<input type="checkbox" name="groupMelds" ${p.groupMelds !== false ? 'checked' : ''}>`)}
+        ${field('suitColours', 'suitColoursS', opt('deckColors', p.deckColors || 'classic', [['classic', t('redBlack')], ['four', t('fourColours')]]))}
+        ${field('cardSize', '', opt('cardSize', p.cardSize || 'm', [['s', t('small')], ['m', t('medium')], ['l', t('large')]]))}
+        ${field('theme', '', opt('theme', p.theme || 'auto', [['auto', t('matchDevice')], ['light', t('light')], ['dark', t('dark')]]))}
+        <button class="btn primary">${esc(t('saveLook'))}</button></form>
+      <div class="stack-col">
+        <div class="panel settings">
+          <div class="field"><label for="soundSwitch">${esc(t('sound'))}<small>${esc(t('soundS'))}</small></label><input type="checkbox" class="switch" id="soundSwitch" ${p.sound !== false ? 'checked' : ''}></div>
+          <div id="notifyRow"></div>
+        </div>
+        <details class="panel settings rules-box"><summary><h2>${esc(t('houseRules'))}</h2><span class="hint">${esc(t('sharedHint'))}</span></summary>
+        <form id="rules">
         ${field('jokersL', 'jokersS', num('jokers', 0, 4))}
         ${field('dealtL', 'dealtS', num('handSize', 7, 20))}
         ${field('smallestMeld', '', opt('minMeld', String(r.minMeld), [['3', t('cards3')], ['4', t('cards4')]]))}
@@ -707,19 +721,23 @@
         ${field('jokersPerMeld', '', num('maxJokersPerMeld', 0, 4))}
         ${field('takeDiscard', '', chk('allowDiscardPickup', r.allowDiscardPickup))}
         ${field('whoStarts', '', opt('starter', r.starter, [['alternate', t('takeTurns')], ['loser', t('whoLost')], ['winner', t('whoWon')]]))}
-        <button class="btn primary">${esc(t('saveRules'))}</button></form>
-      <form class="panel settings" id="prefs"><h2>${esc(t('yourLook'))}</h2><p class="hint">${esc(t('lookHint'))}</p>
-        ${field('language', '', opt('lang', lang, LANGS.map(l => [l, self.RamiI18n[l].langName])))}
-        <div class="field wide"><label>${esc(t('tableColour'))}</label><div class="swatches">${FELTS.map((c, i) => `<button type="button" class="swatch sw-${i}" data-c="${c}" aria-label="${esc(t('colourN', { n: i + 1 }))}" aria-pressed="${(p.felt || FELTS[0]) === c}"></button>`).join('')}<input type="color" name="felt" value="${p.felt || FELTS[0]}" aria-label="${esc(t('customColour'))}"></div></div>
-        ${field('zlayji', 'zlayjiS', `<input type="checkbox" name="zlayji" ${p.zlayji ? 'checked' : ''}>`)}
-        ${field('groupMelds', 'groupMeldsS', `<input type="checkbox" name="groupMelds" ${p.groupMelds !== false ? 'checked' : ''}>`)}
-        ${field('suitColours', 'suitColoursS', opt('deckColors', p.deckColors || 'classic', [['classic', t('redBlack')], ['four', t('fourColours')]]))}
-        ${field('cardSize', '', opt('cardSize', p.cardSize || 'm', [['s', t('small')], ['m', t('medium')], ['l', t('large')]]))}
-        ${field('theme', '', opt('theme', p.theme || 'auto', [['auto', t('matchDevice')], ['light', t('light')], ['dark', t('dark')]]))}
-        ${field('sound', '', `<input type="checkbox" name="sound" ${p.sound !== false ? 'checked' : ''}>`)}
-        <button class="btn primary">${esc(t('saveLook'))}</button>
-        <p class="storage ${S.storage}">${esc(t('storageL'))}: <b>${esc(S.storage === 'mongodb' ? t('storageMongo') : t('storageFile'))}</b></p></form></div>`;
+        <button class="btn primary">${esc(t('saveRules'))}</button></form></details>
+        <p class="storage ${S.storage}">${esc(t('storageL'))}: <b>${esc(S.storage === 'mongodb' ? t('storageMongo') : t('storageFile'))}</b></p>
+      </div></div>
+      <div class="secret">
+        ${zlOpen ? `<div class="panel settings zl-panel"><div class="field"><label for="zlSwitch"><span class="zl-title">${FLAG}${esc(t('zlayji'))}</span><small>${esc(t('zlayjiS'))}</small></label>
+          <input type="checkbox" class="switch" id="zlSwitch" ${p.zlayji ? 'checked' : ''}></div></div>`
+        : `<button type="button" class="secret-star" id="secretStar" aria-label="★">★</button>`}
+      </div>`;
 
+    $('#soundSwitch').addEventListener('change', e => {
+      S.me.prefs = { ...S.me.prefs, sound: e.target.checked };
+      call('/api/prefs', { prefs: { sound: e.target.checked } }).catch(() => {});
+      if (e.target.checked) sfx.test();
+    });
+    $('#secretStar')?.addEventListener('click', () => { zlRevealed = true; renderSettings(); });
+    $('#zlSwitch')?.addEventListener('change', e => setZlayji(e.target.checked));
+    renderNotifyRow();
     $('#rules').addEventListener('submit', async e => {
       e.preventDefault(); const f = e.target;
       const rules = { jokers: +f.jokers.value, handSize: +f.handSize.value, minMeld: +f.minMeld.value, maxJokersPerMeld: +f.maxJokersPerMeld.value,
@@ -737,10 +755,12 @@
     pf.addEventListener('submit', async e => {
       e.preventDefault();
       const prefs = { lang: pf.lang.value, felt: pf.felt.value, deckColors: pf.deckColors.value, cardSize: pf.cardSize.value,
-        theme: pf.theme.value, sound: pf.sound.checked, groupMelds: pf.groupMelds.checked, zlayji: pf.zlayji.checked };
-      try { await call('/api/prefs', { prefs }); setLang(prefs.lang); toast(t('saved')); if (prefs.sound) sfx.test(); refresh(); } catch (x) { toast(x.message); }
+        theme: pf.theme.value, groupMelds: pf.groupMelds.checked };
+      try { await call('/api/prefs', { prefs }); setLang(prefs.lang); toast(t('saved')); refresh(); } catch (x) { toast(x.message); }
     });
   }
+
+  function renderNotifyRow() {}
 
   // ---------- start ----------
   window.addEventListener('hashchange', () => { sel = null; render(); });
