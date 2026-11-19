@@ -2,6 +2,7 @@
 // Moroccan Rami rules engine. The server is the only place game state changes,
 // so each player only ever receives their own hand.
 const crypto = require('crypto');
+const { parse, findRami, bestMelds } = require('./public/melds.js');
 
 const SUITS = ['S', 'H', 'D', 'C'];
 
@@ -50,95 +51,6 @@ function shuffle(a) {
   return a;
 }
 
-function parse(id) {
-  if (id[0] === 'J') return { id, joker: true };
-  const [r, s] = id.split('-');
-  return { id, r: +r, s };
-}
-
-// ---------- Rami check ----------
-// Finds a way to split `ids` into melds that satisfies the rules,
-// or returns null. Returns [{type:'swivi'|'tirci', cards:[ids]}].
-function findRami(ids, rules) {
-  const nat = ids.map(parse).filter(c => !c.joker)
-    .sort((a, b) => a.s.localeCompare(b.s) || a.r - b.r);
-  const jok = ids.filter(id => id[0] === 'J');
-  const maxJ = rules.maxJokersPerMeld;
-
-  function rec(nat, jok, hasSwivi, hasTirci) {
-    if (!nat.length) {
-      if (jok.length) return null;
-      if (rules.requireSwivi && !hasSwivi) return null;
-      if (rules.requireTirci && !hasTirci) return null;
-      return [];
-    }
-    const c = nat[0], rest = nat.slice(1);
-
-    // tirci: same rank, all different suits (max 4 cards)
-    const bySuit = {};
-    for (const x of rest) if (x.r === c.r && x.s !== c.s && !bySuit[x.s]) bySuit[x.s] = x;
-    const others = Object.values(bySuit);
-    for (let mask = 0; mask < (1 << others.length); mask++) {
-      const pick = others.filter((_, i) => (mask >> i) & 1);
-      const n = 1 + pick.length;
-      for (let j = 0; j <= Math.min(jok.length, maxJ) && n + j <= 4; j++) {
-        if (n + j < rules.minMeld) continue;
-        const nr = rest.filter(x => !pick.includes(x));
-        const r = rec(nr, jok.slice(j), hasSwivi, true);
-        if (r) return [{ type: 'tirci', cards: [c.id, ...pick.map(x => x.id), ...jok.slice(0, j)] }, ...r];
-      }
-    }
-
-    // swivi: same suit, consecutive. Position 1 = low ace, 14 = high ace. No wrap-around.
-    const positions = [];
-    if (c.r === 1) { if (rules.aceLow) positions.push(1); if (rules.aceHigh) positions.push(14); }
-    else positions.push(c.r);
-    const lowest = rules.aceLow ? 1 : 2, highest = rules.aceHigh ? 14 : 13;
-    for (const p of positions) {
-      // a high ace sits at the top, so the run can start anywhere below it
-      const sMin = p === 14 ? 2 : Math.max(lowest, p - Math.min(jok.length, maxJ));
-      for (let s = sMin; s <= p; s++) {
-        for (let e = Math.max(p, s + rules.minMeld - 1); e <= Math.min(highest, s + 12); e++) {
-          const r = fillRun(s, e, p, c, rest, jok, maxJ, (pool, used, meld) => {
-            const tail = rec(pool, jok.slice(used), true, hasTirci);
-            return tail ? [{ type: 'swivi', cards: meld }, ...tail] : null;
-          });
-          if (r) return r;
-        }
-      }
-    }
-    return null;
-  }
-
-  // Walk positions s..e; at each one use a natural card if present, or a joker.
-  function fillRun(s, e, p, c, pool, jok, maxJ, done) {
-    const meld = [];
-    function step(q, pool, used) {
-      if (q > e) {
-        let k = 0;
-        const cards = meld.map(x => x ?? jok[k++]);
-        return done(pool, used, cards);
-      }
-      if (q === p) { meld.push(c.id); const r = step(q + 1, pool, used); meld.pop(); return r; }
-      const rank = q === 14 ? 1 : q;
-      const i = pool.findIndex(x => x.s === c.s && x.r === rank);
-      if (i >= 0) {
-        const np = pool.slice(); const [x] = np.splice(i, 1);
-        meld.push(x.id); const r = step(q + 1, np, used); meld.pop();
-        if (r) return r;
-      }
-      if (used < Math.min(jok.length, maxJ)) {
-        meld.push(null); const r = step(q + 1, pool, used + 1); meld.pop();
-        if (r) return r;
-      }
-      return null;
-    }
-    return step(s, pool, 0);
-  }
-
-  return rec(nat, jok, false, false);
-}
-
 // ---------- Game lifecycle ----------
 function newGame({ no, players, starter, rules }) {
   const deck = makeDeck(rules.jokers);
@@ -154,17 +66,20 @@ function newGame({ no, players, starter, rules }) {
   };
 }
 
+// Errors carry a code so the browser can show them in the player's language.
+function err(code, message) { const e = new Error(message); e.code = code; return e; }
+
 const other = (g, id) => g.players.find(p => p !== id);
 
 function apply(g, uid, move) {
-  if (g.winner || g.result) throw new Error('This game is over.');
-  if (!g.players.includes(uid)) throw new Error('You are not in this game.');
+  if (g.winner || g.result) throw err('over', 'This game is over.');
+  if (!g.players.includes(uid)) throw err('notInGame', 'You are not in this game.');
   const hand = g.hands[uid];
 
   if (move.type === 'reorder') {
     const order = Array.isArray(move.order) ? move.order : [];
     if (order.length !== hand.length || [...order].sort().join() !== [...hand].sort().join())
-      throw new Error('Hand changed, refresh.');
+      throw err('handChanged', 'Hand changed, refresh.');
     g.hands[uid] = order;
     return { quiet: true };
   }
@@ -173,18 +88,18 @@ function apply(g, uid, move) {
     g.log.push({ by: uid, type: 'resign', at: Date.now() });
     return {};
   }
-  if (g.turn !== uid) throw new Error("It's not your turn.");
+  if (g.turn !== uid) throw err('notYourTurn', "It's not your turn.");
 
   if (move.type === 'draw') {
-    if (g.phase !== 'draw') throw new Error('You already drew. Discard a card.');
+    if (g.phase !== 'draw') throw err('alreadyDrew', 'You already drew. Discard a card.');
     let card;
     if (move.source === 'discard') {
-      if (!g.rules.allowDiscardPickup) throw new Error('Picking up from the discard pile is off in your house rules.');
-      if (!g.discard.length) throw new Error('The discard pile is empty.');
+      if (!g.rules.allowDiscardPickup) throw err('noPickup', 'Picking up from the discard pile is off in your house rules.');
+      if (!g.discard.length) throw err('discardEmpty', 'The discard pile is empty.');
       card = g.discard.pop();
     } else {
       if (!g.deck.length) {
-        if (g.discard.length < 2) throw new Error('No cards left to draw.');
+        if (g.discard.length < 2) throw err('noCards', 'No cards left to draw.');
         const top = g.discard.pop();
         g.deck = shuffle(g.discard); g.discard = [top];
         g.log.push({ by: null, type: 'reshuffle', at: Date.now() });
@@ -200,15 +115,15 @@ function apply(g, uid, move) {
   }
 
   if (move.type === 'discard' || move.type === 'declare') {
-    if (g.phase !== 'discard') throw new Error('Draw a card first.');
+    if (g.phase !== 'discard') throw err('drawFirst', 'Draw a card first.');
     const i = hand.indexOf(move.card);
-    if (i < 0) throw new Error('That card is not in your hand.');
+    if (i < 0) throw err('notInHand', 'That card is not in your hand.');
     const rest = hand.filter((_, k) => k !== i);
     if (move.type === 'declare') {
       const melds = findRami(rest, g.rules);
       if (!melds) {
         const need = [g.rules.requireSwivi && 'a swivi', g.rules.requireTirci && 'a tirci'].filter(Boolean);
-        throw new Error(`Not a Rami yet. Every card except your discard has to be in a meld${need.length ? `, including ${need.join(' and ')}` : ''}.`);
+        throw err('notRami', `Not a Rami yet. Every card except your discard has to be in a meld${need.length ? `, including ${need.join(' and ')}` : ''}.`);
       }
       g.hands[uid] = rest; g.discard.push(move.card);
       g.winner = uid; g.result = 'rami'; g.endedAt = Date.now(); g.melds = melds;
@@ -222,7 +137,7 @@ function apply(g, uid, move) {
     g.log.push({ by: uid, type: 'discard', card: move.card, at: Date.now() });
     return {};
   }
-  throw new Error('Unknown move.');
+  throw err('unknownMove', 'Unknown move.');
 }
 
 // What one player is allowed to see.
@@ -246,4 +161,4 @@ function view(g, uid) {
   };
 }
 
-module.exports = { DEFAULT_RULES, cleanRules, newGame, apply, view, findRami, parse };
+module.exports = { DEFAULT_RULES, cleanRules, newGame, apply, view, findRami, bestMelds, parse };

@@ -193,3 +193,39 @@ input[type=color] { width: 54px; height: 44px; border: 1px solid var(--line); bo
 }
 .center-text { text-align: center; margin: 0 }
 .login .hint { color: var(--muted); opacity: 1 }
+
+/* ---------- hand groups: melds, loose cards, new card ---------- */
+.hand { align-items: flex-end; gap: 10px; padding-top: 4px }
+.group { display: grid; gap: 4px; padding: 18px 6px 6px; border-radius: 12px; position: relative }
+.group-cards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center }
+.group-label { position: absolute; top: 2px; inset-inline-start: 8px; font-size: 11px; font-weight: 600; letter-spacing: .02em; opacity: .9 }
+.group.meld-swivi { background: rgba(232,178,58,.18); box-shadow: inset 0 0 0 2px rgba(232,178,58,.75) }
+.group.meld-tirci { background: rgba(120,200,255,.14); box-shadow: inset 0 0 0 2px rgba(150,210,255,.7) }
+.group.meld-swivi .group-label { color: var(--saffron) }
+.group.meld-tirci .group-label { color: #a9dcff }
+.group.loose { background: rgba(0,0,0,.12) }
+.group.drawn { margin-inline-start: 18px; background: rgba(255,255,255,.08); outline: 2px dashed rgba(255,255,255,.45); outline-offset: -2px }
+.group.drawn .group-label { color: var(--saffron) }
+.meld-summary { text-align: center; font-size: 13px; opacity: .85; margin: 0 0 6px }
+.rami-ready { text-align: center; margin: 0 0 8px; font-weight: 600; color: var(--saffron) }
+.card.win-throw { box-shadow: 0 0 0 3px #7fe0a0, 0 6px 14px -6px rgba(0,0,0,.45) }
+.btn.pulse { animation: pulse 1.4s ease-in-out infinite }
+@keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(232,178,58,.25) } }
+.meld.meld-swivi { box-shadow: inset 0 0 0 2px rgba(232,178,58,.6) }
+.meld.meld-tirci { box-shadow: inset 0 0 0 2px rgba(80,150,210,.55) }
+.gap-top { margin-top: 16px }
+
+/* ---------- language ---------- */
+select.lang { min-height: 36px; padding: 4px 8px; font-size: 14px; border-radius: 999px; background: rgba(255,255,255,.1); color: inherit; border: 1px solid rgba(255,255,255,.3) }
+select.lang option { color: #231c15 }
+.login-lang { display: flex; justify-content: flex-end }
+.login-lang select.lang { background: var(--bg); color: var(--ink); border-color: var(--line) }
+:root[lang=ar] body { font-family: 'Noto Kufi Arabic', Rubik, system-ui, sans-serif }
+:root[lang=ar] h1, :root[lang=ar] h2, :root[lang=ar] h3 { font-family: 'Noto Kufi Arabic', 'Reem Kufi', sans-serif }
+.card { direction: ltr }          /* card faces read the same in every language */
+.brand { direction: ltr }
+@media (max-width: 600px) { .group.drawn { margin-inline-start: 0 } .hand { gap: 6px } .group { padding-inline: 4px } }
+@media (prefers-reduced-motion: reduce) { .btn.pulse { animation: none } }
+.group { padding: 4px 6px 6px }
+.group-label { position: static; display: block; white-space: nowrap; line-height: 1.4; min-height: 15px }
+.group-cards { direction: ltr }   /* runs read low to high, left to right, in every language */

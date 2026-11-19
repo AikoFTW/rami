@@ -121,6 +121,8 @@ function cleanPrefs(p) {
   if (['s', 'm', 'l'].includes(p.cardSize)) out.cardSize = p.cardSize;
   if (typeof p.sound === 'boolean') out.sound = p.sound;
   if (['auto', 'light', 'dark'].includes(p.theme)) out.theme = p.theme;
+  if (['en', 'ar', 'fr'].includes(p.lang)) out.lang = p.lang;
+  if (typeof p.groupMelds === 'boolean') out.groupMelds = p.groupMelds;
   return out;
 }
 
@@ -172,12 +174,12 @@ async function api(req, res, url) {
   if (route === 'GET /api/public') return send(res, 200, { signupOpen: Object.keys(db.users).length < MAX_USERS });
 
   if (route === 'POST /api/signup') {
-    if (Object.keys(db.users).length >= MAX_USERS) return send(res, 403, { error: 'Sign-up is closed. Both players already have accounts.' });
-    if (throttled(ip)) return send(res, 429, { error: 'Too many tries. Wait 15 minutes.' });
+    if (Object.keys(db.users).length >= MAX_USERS) return send(res, 403, { error: 'Sign-up is closed. Both players already have accounts.', code: 'signupClosed' });
+    if (throttled(ip)) return send(res, 429, { error: 'Too many tries. Wait 15 minutes.', code: 'tooMany' });
     const { name, password } = await readBody(req);
-    if (!validName(name)) return send(res, 400, { error: 'Pick a name of 2 to 24 letters or numbers.' });
-    if (typeof password !== 'string' || password.length < 6) return send(res, 400, { error: 'Use a password of at least 6 characters.' });
-    if (findUser(name)) return send(res, 409, { error: 'That name is taken.' });
+    if (!validName(name)) return send(res, 400, { error: 'Pick a name of 2 to 24 letters or numbers.', code: 'badName' });
+    if (typeof password !== 'string' || password.length < 6) return send(res, 400, { error: 'Use a password of at least 6 characters.', code: 'badPassword' });
+    if (findUser(name)) return send(res, 409, { error: 'That name is taken.', code: 'nameTaken' });
     const u = createUser(name, password);
     persist(() => store.saveUser(u));
     startSession(req, res, u); broadcast();
@@ -185,19 +187,19 @@ async function api(req, res, url) {
   }
 
   if (route === 'POST /api/login') {
-    if (throttled(ip)) return send(res, 429, { error: 'Too many tries. Wait 15 minutes.' });
+    if (throttled(ip)) return send(res, 429, { error: 'Too many tries. Wait 15 minutes.', code: 'tooMany' });
     const { name, password } = await readBody(req);
     const u = findUser(name || '');
     if (!u || typeof password !== 'string' || !checkPassword(u, password)) {
       attempts.get(ip).push(Date.now());
-      return send(res, 401, { error: 'Wrong name or password.' });
+      return send(res, 401, { error: 'Wrong name or password.', code: 'wrongLogin' });
     }
     startSession(req, res, u);
     return send(res, 200, { ok: true });
   }
 
   const u = currentUser(req);
-  if (!u) return send(res, 401, { error: 'Please sign in.' });
+  if (!u) return send(res, 401, { error: 'Please sign in.', code: 'signIn' });
 
   switch (route) {
     case 'POST /api/logout': {
@@ -227,9 +229,9 @@ async function api(req, res, url) {
     }
     case 'POST /api/game/new': {
       const g = db.game;
-      if (g && !g.result) return send(res, 409, { error: 'A game is still being played. Finish or resign it first.' });
+      if (g && !g.result) return send(res, 409, { error: 'A game is still being played. Finish or resign it first.', code: 'gameInProgress' });
       const others = Object.values(db.users).filter(x => x.id !== u.id);
-      if (!others.length) return send(res, 400, { error: 'Your partner needs to sign up first.' });
+      if (!others.length) return send(res, 400, { error: 'Your partner needs to sign up first.', code: 'needPartner' });
       const body = await readBody(req);
       const opp = others.find(x => x.id === body.opponent) || others[0];
       const same = g && g.players.includes(u.id) && g.players.includes(opp.id);
@@ -248,7 +250,7 @@ async function api(req, res, url) {
     }
     case 'POST /api/game/move': {
       const g = db.game;
-      if (!g) return send(res, 400, { error: 'No game yet.' });
+      if (!g) return send(res, 400, { error: 'No game yet.', code: 'noGame' });
       const move = await readBody(req);
       try {
         const wasOver = !!g.result;
@@ -258,7 +260,7 @@ async function api(req, res, url) {
         persist(() => store.saveGame(snapshot));
         if (!r.quiet) broadcast();
         return send(res, 200, { ok: true });
-      } catch (e) { return send(res, 400, { error: e.message }); }
+      } catch (e) { return send(res, 400, { error: e.message, code: e.code }); }
     }
   }
   return send(res, 404, { error: 'Not found' });

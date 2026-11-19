@@ -11,7 +11,11 @@ Moroccan Rami for two, played in the browser with live turns, the way you'd play
 - The ace is low (A-2-3) or high (Q-K-A). No wrap-around.
 - The first player to Rami wins, and the scoreboard counts wins.
 
-The server checks every Rami automatically, so it can't be declared by mistake. Every rule above can be changed on the **Settings** page. Each player also picks their own table colour, card size, suit colours, theme and turn sound there.
+The server checks every Rami automatically, so it can't be declared by mistake.
+
+While you play, your hand is grouped into the melds you already have (gold for swivi, blue for tirci), with loose cards after them. A card you just drew sits apart until you've thrown a card. When a throw would win, that card gets a green ring and Declare Rami pulses. You can turn grouping off in Settings.
+
+The site is in **English, Arabic and French**. Pick a language on the sign-in screen, at the top of any page, or in Settings. Arabic reads right to left. Every rule above can be changed on the **Settings** page. Each player also picks their own table colour, card size, suit colours, theme and turn sound there.
 
 ## Run it
 
